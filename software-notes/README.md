@@ -5,13 +5,13 @@ This consists of some notes regarding the currently available software for calcu
 * Takes in direct .jpg images and returned LAI values. 
 * Seems to match up reasonably closely with Hemisfer. 
 * Throws random errors on vertically aligned / "portrait" images, so I rotated LDF2_1_20140721.JPG,  LDF2_2_20140721.JPG, LDF2_3_20140721.JPG, LDF2_4_20140721.JPG by 90 deg to pass as input. 
-* Outputs in hemiphot_output.txt
+* Outputs in hemiphot_output.txt - (...somewhat close to hemisfer outputs?)
 * Last updated 2018. 
 
 #### [Canopy Gap Analyzer](https://github.com/dabasler/CanopyGapAnalyzer)
 * Python script to take in jpg images, binarize, and calculate LAI
 * Documentation somewhat outdated, but main script seems to work. 
-* Outputs at cga_output.txt
+* Outputs at cga_output.txt - (...don't really seem very accurate?)
 
 ####  [MATLAB codes for canopy image analysis](https://www.mathworks.com/matlabcentral/fileexchange/24314-matlab-codes-for-canopy-image-analysis)
 * Binarizes images and calculates canopy cover
