@@ -56,7 +56,7 @@ shrub.data$Leaf.Area <- ifelse(shrub.data$Species == "Betula" &  shrub.data$dens
 library(dplyr)
 #make new data frame for sums per each site and LAI
 #sum leaf area and site area
-shrubs.sum.area <- aggregate(shrub.data$Area.Sampled..m2., by=list(Site=shrub.data$Site), FUN=sum)
+shrubs.sum.area <- aggregate(shrub.data$Area.Sampled..m2., by=list(Site=shrub.data$Site), FUN=mean)
 shrubs.sum.la <- aggregate(shrub.data$Leaf.Area, by=list(Site=shrub.data$Site), FUN=sum)
 #join together and rename columns
 shrubs.sum <- left_join(shrubs.sum.area,shrubs.sum.la,by="Site")

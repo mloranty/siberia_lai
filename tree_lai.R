@@ -56,7 +56,7 @@ tree.data$Leaf.Area <- ifelse(tree.data$density == "HIGH",
 library(dplyr)
 #make new data frame for sums per each site and LAI
 #sum leaf area and site area
-tree.sum.area <- aggregate(tree.data$Area.Sampled_m2, by=list(Site=tree.data$Site), FUN=sum)
+tree.sum.area <- aggregate(tree.data$Area.Sampled_m2, by=list(Site=tree.data$Site), FUN=mean)
 tree.sum.la <- aggregate(tree.data$Leaf.Area, by=list(Site=tree.data$Site), FUN=sum)
 #join together and rename columns
 tree.sum <- left_join(tree.sum.area,tree.sum.la,by="Site")
