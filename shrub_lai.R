@@ -10,7 +10,7 @@ leaf.mass <- function(a,x,b) {
 #prevent scientific notation
 options(scipen=999)
 
-#add lead mass to data frame in new column
+#add leaf mass to data frame in new column
 shrub.data$Leaf.Mass <- ifelse(shrub.data$Species == "Betula", 
                                leaf.mass(4.57, shrub.data$BD_cm, 2.45), 
                                leaf.mass(3.11, shrub.data$BD_cm, 2.18))
