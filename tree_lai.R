@@ -61,6 +61,10 @@ tree.sum.la <- aggregate(tree.data$Leaf.Area, by=list(Site=tree.data$Site), FUN=
 #join together and rename columns
 tree.sum <- left_join(tree.sum.area,tree.sum.la,by="Site")
 tree.sum <- rename(tree.sum, c("Sampled.Area"="x.x","Leaf.Area"="x.y"))
+tree.sum <- tree.sum[-c(1),]
 
 #get LAI!
 tree.sum$LAI <- tree.sum$Leaf.Area/tree.sum$Sampled.Area
+
+#write csv LAI summary
+write.csv(tree.sum,file = "data/allometry_data/tree_lai_sum.csv")

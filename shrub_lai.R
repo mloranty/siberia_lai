@@ -65,3 +65,5 @@ shrubs.sum <- rename(shrubs.sum, c("Sampled.Area"="x.x","Leaf.Area"="x.y"))
 #get LAI!
 shrubs.sum$LAI <- shrubs.sum$Leaf.Area/shrubs.sum$Sampled.Area
 
+#write csv LAI summary
+write.csv(shrubs.sum,file = "data/allometry_data/shrubs_lai_sum.csv")
