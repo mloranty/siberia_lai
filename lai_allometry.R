@@ -86,8 +86,7 @@ shrubs.sum$Area.Sampled.m2 <- shrubs.site$Area.Sampled.m2
 #get LAI!
 shrubs.sum$LAI.m2.m2 <- shrubs.sum$Leaf.Area.m2/shrubs.sum$Area.Sampled.m2
 
-#write csv LAI summary
-write.csv(shrubs.sum,file = "data/allometry_data/shrubs_lai_sum.csv")
+
 #--------------------------------------------------------------------------------------------------------
 
 ## SECTION 2
@@ -179,3 +178,17 @@ trees.sum$Area.Sampled.m2 <- trees.site$Area.Sampled.m2
 
 #get LAI!
 trees.sum$LAI.m2.m2 <- trees.sum$Leaf.Area.m2/trees.sum$Area.Sampled.m2
+#--------------------------------------------------------------------------------------------------------
+
+## SECTION 3
+## Combine tree and shrub LAI results
+
+shrubs.header <- data.frame("Shrubs:",NA,NA,NA)
+colnames(shrubs.header) <- c("Site.Plot","Leaf.Area.m2","Area.Sampled.m2","LAI.m2.m2")
+trees.header <- data.frame("Trees:",NA,NA,NA)
+colnames(trees.header) <- c("Site.Plot","Leaf.Area.m2","Area.Sampled.m2","LAI.m2.m2")
+
+trees.and.shrubs <- rbind(shrubs.header,shrubs.sum,trees.header,trees.sum)
+
+write.csv(trees.and.shrubs,"lai_allom_byplot.csv")
+
