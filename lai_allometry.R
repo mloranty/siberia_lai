@@ -5,6 +5,7 @@
 ## Calculate LAI for shrubs
 
 #read in shrub data
+#shrub data can be found @ https://github.com/mloranty/siberia_lai -> data -> allometry data
 shrub.data <- read.csv("data/allometry_data/shrubdata.csv")
 
 #change column names
@@ -93,6 +94,7 @@ shrubs.sum$LAI.m2.m2 <- shrubs.sum$Leaf.Area.m2/shrubs.sum$Area.Sampled.m2
 ## Calculate LAI for trees
 
 #read in tree data
+#tree data can be found @ https://github.com/mloranty/siberia_lai -> data -> allometry data
 tree.data <- read.csv("data/allometry_data/treedata.csv")
 colnames(tree.data) <- c("Site","Plot","Area.Sampled.m2","BD.cm","DBH.cm","Diameter.cm")
 
