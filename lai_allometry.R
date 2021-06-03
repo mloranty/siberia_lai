@@ -107,45 +107,21 @@ leaf.mass <- function(a,x,b) {
 #prevent scientific notation
 options(scipen=999)
 
-#add column for diameter type
-tree.data$Diameter.Type <- ifelse(is.na(tree.data$BD.cm),paste("DBH"),paste("BD"))
-
-#remove separate BD and DBH columns
+#remove separate BD and diameter columns
 tree.data$BD.cm <- NULL
-tree.data$DBH.cm <- NULL
+tree.data$Diameter.cm <- NULL
+
+#add column denoting high or low density
+tree.data$Density.HL <- ifelse(grepl("H",tree.data$Site)|grepl("M",tree.data$Site),paste("HIGH"),paste("LOW"))
 
 #add leaf mass to data frame in new column
-#plug diameter into equation for BD or DBH
-tree.data$Leaf.Mass <- ifelse(tree.data$Diameter.Type == "BD",                
-                               leaf.mass(22.55, tree.data$Diameter.cm, 1.45),   #for BD
-                               leaf.mass(40.50, tree.data$Diameter.cm, 1.41))   #for DBH
-#import SLA data
-trees.sla <- read.csv("data/allometry_data/SLA_trees_shrubs_2017.csv")
-
-#clean up extra columns
-trees.sla$SLA..cm2.g. <- NULL
-trees.sla$X <- NULL
-trees.sla$X.1 <- NULL
-trees.sla$SLA..m2.g. <- NULL
-trees.sla$big.leaves <- NULL
-trees.sla$petioles <- NULL
-
-#make column for SLA in cm^2/g
-trees.sla$SLA.cm2.g <- trees.sla$Total.Leaf.Area/trees.sla$Mass
-
-#calculate average SLA for high density and low density 
-#subset by density
-larix.h <- subset(trees.sla, Site == "High Density")
-larix.l <- subset(trees.sla, Site == "Low Density")
-
-#calculate 2 mean sla values
-lar.h.sla <- mean(larix.h$SLA.cm2.g)
-lar.l.sla <- mean(larix.l$SLA.cm2.g)
-
-#add column to original for density
-tree.data$density.tf <- grepl("H+", tree.data$Site, perl = TRUE)
-tree.data$Density.HL <- ifelse(tree.data$density.tf == "TRUE", print("HIGH"), print("LOW"))
-tree.data = subset(tree.data, select = -c(density.tf))
+tree.data$Leaf.Mass <- ifelse(tree.data$Density.HL == "HIGH",
+                              leaf.mass(7.57, tree.data$DBH.cm, 1.73),
+                              leaf.mass(150.5, tree.data$DBH.cm, 1))
+      
+#assign sla values from Kropp 2016 for high and low density
+lar.h.sla <- 112.89
+lar.l.sla <- 84.69
 
 #add column to calculate leaf area
 tree.data$Leaf.Area.cm2 <- ifelse(tree.data$Density.HL == "HIGH", 
@@ -161,7 +137,7 @@ tree.data$Leaf.Area.cm2 <- NULL
 
 #combine site and plot columns to give each plot a unique site.plot name
 tree.data$Site.Plot <- paste(tree.data$Site,tree.data$Plot,sep = ".")
-tree.data <- tree.data[,c(9,3,4,5,6,7,8)]
+tree.data <- tree.data[,c(8,3,4,5,6,7)]
 
 #make new data frame to store total leaf area per each site and calculate LAI
 #sum leaf area per plot and plot area
