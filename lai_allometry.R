@@ -51,17 +51,17 @@ bet.l.sla <- mean(betula.l$SLA.cm2.g)
 sal.h.sla <- mean(salix.h$SLA.cm2.g)
 sal.l.sla <- mean(salix.l$SLA.cm2.g)
 
-#add column to original dataframe for density
-shrub.data$density.tf <- grepl("H+", shrub.data$Site, perl = TRUE)
-shrub.data$Density.HL <- ifelse(shrub.data$density.tf == "TRUE", print("HIGH"), print("LOW"))
-shrub.data <- subset(shrub.data, select = -c(density.tf))
+#add column denoting high, medium, or low density
+shrub.data$Density <- ifelse(grepl("H",shrub.data$Site),paste("HIGH"),
+                            ifelse(grepl("M",shrub.data$Site),paste("MED"),
+                                   paste("LOW")))
 
 #add column to calculate leaf area (cm^2)
-shrub.data$Leaf.Area.cm2 <- ifelse(shrub.data$Species == "Betula" &  shrub.data$Density.HL == "HIGH", 
+shrub.data$Leaf.Area.cm2 <- ifelse(shrub.data$Species == "Betula" &  shrub.data$Density == "HIGH", 
                                    shrub.data$Leaf.Mass*bet.h.sla,
-                                   ifelse(shrub.data$Species == "Betula" &  shrub.data$Density.HL == "LOW",
+                                   ifelse(shrub.data$Species == "Betula" &  shrub.data$Density == "LOW",
                                           shrub.data$Leaf.Mass*bet.l.sla,
-                                          ifelse(shrub.data$Species == "Salix" &  shrub.data$Density.HL == "HIGH",
+                                          ifelse(shrub.data$Species == "Salix" &  shrub.data$Density == "HIGH",
                                                  shrub.data$Leaf.Mass*sal.h.sla, shrub.data$Leaf.Mass*sal.l.sla)))
 
 #convert leaf area from cm^2 to m^2
@@ -86,6 +86,12 @@ shrubs.site <- aggregate(x = shrub.data["Area.Sampled.m2"],   #takes plot area
 )
 shrubs.sum$Area.Sampled.m2 <- shrubs.site$Area.Sampled.m2
 
+#add back column to indicate density
+shrubs.sum$Density <- ifelse(grepl("H",shrubs.sum$Site.Plot),paste("HIGH"),
+                            ifelse(grepl("M",shrubs.sum$Site.Plot),paste("MED"),
+                                   paste("LOW")))
+shrubs.sum <- shrubs.sum[,c(1,4,2,3)]
+
 #divide total leaf area per plot by plot area to get LAI!
 shrubs.sum$LAI.m2.m2 <- shrubs.sum$Leaf.Area.m2/shrubs.sum$Area.Sampled.m2
 #--------------------------------------------------------------------------------------------------------
@@ -107,29 +113,36 @@ leaf.mass <- function(a,x,b) {
 #prevent scientific notation
 options(scipen=999)
 
-#remove separate BD and diameter columns
-tree.data$BD.cm <- NULL
-tree.data$Diameter.cm <- NULL
+#add column to indicate diameter type (BD or DBH)
+tree.data$Diameter.Type <- ifelse(is.na(tree.data$BD.cm),paste("DBH"),paste("BD"))
 
-#add column denoting high or low density
-tree.data$Density.HL <- ifelse(grepl("H",tree.data$Site)|grepl("M",tree.data$Site),paste("HIGH"),paste("LOW"))
+#remove separate BD and DBH columns
+tree.data$BD.cm <- NULL
+tree.data$DBH.cm <- NULL
+
+#add column denoting high, medium, or low density
+tree.data$Density <- ifelse(grepl("H",tree.data$Site),paste("HIGH"),
+                        ifelse(grepl("M",tree.data$Site),paste("MED"),
+                               paste("LOW")))
 
 #add leaf mass to data frame in new column
-tree.data$Leaf.Mass <- ifelse(tree.data$Density.HL == "HIGH",
-                              leaf.mass(7.57, tree.data$DBH.cm, 1.73),
-                              leaf.mass(150.5, tree.data$DBH.cm, 1))
+tree.data$Leaf.Mass <- ifelse(tree.data$Diameter.Type == "BD",
+                              leaf.mass(22.55,tree.data$Diameter.cm,1.45),
+                       ifelse(tree.data$Density == "HIGH"|tree.data$Density == "MED",
+                              leaf.mass(7.57, tree.data$Diameter.cm, 1.73),
+                              leaf.mass(150.5, tree.data$Diameter.cm, 1)))
       
 #assign sla values from Kropp 2016 for high and low density
 lar.h.sla <- 112.89
 lar.l.sla <- 84.69
 
 #add column to calculate leaf area
-tree.data$Leaf.Area.cm2 <- ifelse(tree.data$Density.HL == "HIGH", 
+tree.data$Leaf.Area.cm2 <- ifelse(tree.data$Density == "HIGH"|tree.data$Density == "MED", 
                               tree.data$Leaf.Mass*lar.h.sla,
                               tree.data$Leaf.Mass*lar.l.sla)
 
 #remove extra rows (1:5196 includes "Davy" site, 1:5011 drops "Davy" site)
-tree.data <- tree.data[1:5011,]
+tree.data <- tree.data[1:5196,]
 
 #convert leaf area from cm^2 to m^2
 tree.data$Leaf.Area.m2 <- tree.data$Leaf.Area.cm2/10000
@@ -137,7 +150,7 @@ tree.data$Leaf.Area.cm2 <- NULL
 
 #combine site and plot columns to give each plot a unique site.plot name
 tree.data$Site.Plot <- paste(tree.data$Site,tree.data$Plot,sep = ".")
-tree.data <- tree.data[,c(8,3,4,5,6,7)]
+tree.data <- tree.data[,c(9,3,4,5,6,7,8)]
 
 #make new data frame to store total leaf area per each site and calculate LAI
 #sum leaf area per plot and plot area
@@ -155,6 +168,12 @@ trees.site <- aggregate(x = tree.data["Area.Sampled.m2"],   #takes plot area
 )
 trees.sum$Area.Sampled.m2 <- trees.site$Area.Sampled.m2
 
+#add back column to indicate density
+trees.sum$Density <- ifelse(grepl("H",trees.sum$Site.Plot),paste("HIGH"),
+                      ifelse(grepl("M",trees.sum$Site.Plot),paste("MED"),
+                                      paste("LOW")))
+trees.sum <- trees.sum[,c(1,4,2,3)]
+
 #divide total leaf area per plot by plot area to get LAI!
 trees.sum$LAI.m2.m2 <- trees.sum$Leaf.Area.m2/trees.sum$Area.Sampled.m2
 #--------------------------------------------------------------------------------------------------------
@@ -163,10 +182,10 @@ trees.sum$LAI.m2.m2 <- trees.sum$Leaf.Area.m2/trees.sum$Area.Sampled.m2
 ## Combine tree and shrub LAI results
 
 #adds headers for trees and shrubs for combined dataframe 
-shrubs.header <- data.frame("Shrubs:",NA,NA,NA)
-colnames(shrubs.header) <- c("Site.Plot","Leaf.Area.m2","Area.Sampled.m2","LAI.m2.m2")
-trees.header <- data.frame("Trees:",NA,NA,NA)
-colnames(trees.header) <- c("Site.Plot","Leaf.Area.m2","Area.Sampled.m2","LAI.m2.m2")
+shrubs.header <- data.frame("Shrubs:","------","------","------","------")
+colnames(shrubs.header) <- c("Site.Plot","Density","Leaf.Area.m2","Area.Sampled.m2","LAI.m2.m2")
+trees.header <- data.frame("Trees:","------","------","------","------")
+colnames(trees.header) <- c("Site.Plot","Density","Leaf.Area.m2","Area.Sampled.m2","LAI.m2.m2")
 
 #combines shrubs LAI and trees LAI results with headers separating
 trees.and.shrubs <- rbind(shrubs.header,shrubs.sum,trees.header,trees.sum)
