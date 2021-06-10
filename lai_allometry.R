@@ -181,14 +181,46 @@ trees.sum$LAI.m2.m2 <- trees.sum$Leaf.Area.m2/trees.sum$Area.Sampled.m2
 ## SECTION 3
 ## Combine tree and shrub LAI results
 
-#adds headers for trees and shrubs for combined dataframe 
-shrubs.header <- data.frame("Shrubs:","------","------","------","------")
-colnames(shrubs.header) <- c("Site.Plot","Density","Leaf.Area.m2","Area.Sampled.m2","LAI.m2.m2")
-trees.header <- data.frame("Trees:","------","------","------","------")
-colnames(trees.header) <- c("Site.Plot","Density","Leaf.Area.m2","Area.Sampled.m2","LAI.m2.m2")
+#adds column to trees to denote tree data vs. shrub data
+trees.sum$Trees.or.Shrubs <- "TREES"
+trees.sum <- trees.sum[,c(1,2,6,3,4,5)]
+
+#adds column to shrubs to denote tree data vs. shrub data
+shrubs.sum$Trees.or.Shrubs <- "SHRUBS"
+shrubs.sum <- shrubs.sum[,c(1,2,6,3,4,5)]
 
 #combines shrubs LAI and trees LAI results with headers separating
-trees.and.shrubs <- rbind(shrubs.header,shrubs.sum,trees.header,trees.sum)
+trees.and.shrubs <- rbind(shrubs.sum,trees.sum)
 
 #write combined results to csv
 write.csv(trees.and.shrubs,"lai_allom_byplot.csv")
+#--------------------------------------------------------------------------------------------------------
+
+## SECTION 4
+## Statistical Analyses
+
+#to read in summary results and split by trees and shrubs, uncomment and run next 3 lines:
+## trees.and.shrubs <- read.csv("lai_allom_byplot.csv")
+## trees.sum <- trees.and.shrubs[trees.and.shrubs$Trees.or.Shrubs == "TREES",]
+## shrubs.sum <- trees.and.shrubs[trees.and.shrubs$Trees.or.Shrubs == "SHRUBS",]
+
+#one-way anova for trees LAI by density
+trees.dens.aov <- aov(LAI.m2.m2 ~ Density, data = trees.sum)
+summary(trees.dens.aov)
+
+#one-way anova for shrubs LAI by density
+shrubs.dens.aov <- aov(LAI.m2.m2 ~ Density, data = shrubs.sum)
+summary(shrubs.dens.aov)
+
+#post-hoc tukey tests for trees and shrubs
+trees.tuk <- TukeyHSD(trees.dens.aov)
+shrubs.tuk <- TukeyHSD(shrubs.dens.aov)
+
+#visualize anovas with boxplots using ggplot2 pkg
+library(ggplot2)
+
+ggplot(data = trees.sum, aes(Density,LAI.m2.m2,fill=Density)) +
+  geom_boxplot()
+
+ggplot(data = shrubs.sum, aes(Density,LAI.m2.m2,fill=Density)) +
+  geom_boxplot()
