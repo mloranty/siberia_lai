@@ -192,6 +192,12 @@ shrubs.sum <- shrubs.sum[,c(1,2,6,3,4,5)]
 #combines shrubs LAI and trees LAI results with headers separating
 trees.and.shrubs <- rbind(shrubs.sum,trees.sum)
 
+#add column to denote sloped or flat site
+trees.and.shrubs$Slope <- ifelse(grepl("S",trees.and.shrubs$Site.Plot),paste("SLOPED"),paste("FLAT"))
+trees.and.shrubs <- trees.and.shrubs[,c(1,2,3,7,4,5,6)]
+
+
+
 #write combined results to csv
 write.csv(trees.and.shrubs,"lai_allom_byplot.csv")
 #--------------------------------------------------------------------------------------------------------
@@ -200,12 +206,14 @@ write.csv(trees.and.shrubs,"lai_allom_byplot.csv")
 ## Statistical Analyses
 
 #to read in summary results and split by trees and shrubs, uncomment and run next 3 lines:
-## trees.and.shrubs <- read.csv("lai_allom_byplot.csv")
-## trees.sum <- trees.and.shrubs[trees.and.shrubs$Trees.or.Shrubs == "TREES",]
-## shrubs.sum <- trees.and.shrubs[trees.and.shrubs$Trees.or.Shrubs == "SHRUBS",]
+trees.and.shrubs <- read.csv("lai_allom_byplot.csv")
+trees.sum <- trees.and.shrubs[trees.and.shrubs$Trees.or.Shrubs == "TREES",]
+shrubs.sum <- trees.and.shrubs[trees.and.shrubs$Trees.or.Shrubs == "SHRUBS",]
 
+
+## LAI by Density (one-way ANOVAs) ##
 #one-way anova for trees LAI by density
-trees.dens.aov <- aov(LAI.m2.m2 ~ Density, data = trees.sum)
+trees.dens.aov <- aov(LAI.m2.m2 ~ Density, data = trees.sum)z
 summary(trees.dens.aov)
 
 #one-way anova for shrubs LAI by density
@@ -216,11 +224,40 @@ summary(shrubs.dens.aov)
 trees.tuk <- TukeyHSD(trees.dens.aov)
 shrubs.tuk <- TukeyHSD(shrubs.dens.aov)
 
-#visualize anovas with boxplots using ggplot2 pkg
+#visualize anovas with boxplots using ggplot2
 library(ggplot2)
 
+#trees LAI by density boxplot (one-way anova)
 ggplot(data = trees.sum, aes(Density,LAI.m2.m2,fill=Density)) +
   geom_boxplot()
 
+#shrubs LAI by density boxplot
 ggplot(data = shrubs.sum, aes(Density,LAI.m2.m2,fill=Density)) +
   geom_boxplot()
+
+
+## LAI by Density + Slope (two-way ANOVAs) ##
+#two-way anova for trees LAI by density + slope
+trees.dslope.aov <- aov(LAI.m2.m2 ~ Density + Slope, data = trees.sum)
+summary(trees.dslope.aov)
+
+#two-way anova for shrub LAI by density + slope
+shrubs.dslope.aov <- aov(LAI.m2.m2 ~ Density + Slope, data = shrubs.sum)
+summary(shrubs.dslope.aov)
+
+#post-hoc tukey tests for trees and shrubs
+TukeyHSD(trees.dslope.aov)
+TukeyHSD(shrubs.dslope.aov)
+
+## Tree LAI vs. Shrub LAI vs. Total LAI ##
+#reformat data by site (instead of site & plot)
+#make new dataframe to compare tree LAI vs. shrub LAI vs. total LAI
+lai.comp <- trees.and.shrubs
+#add column for site only
+lai.comp$Site <- ifelse(nchar(lai.comp$Site.Plot) < 6,
+                             substr(lai.comp$Site.Plot,1,3),
+                             substr(lai.comp$Site.Plot,1,4))
+#aggregate now by site and trees or shrubs
+lai.comp <- aggregate(lai.comp, list(lai.comp$Site, lai.comp$Trees.or.Shrubs), FUN = mean, na.rm = FALSE)
+
+
