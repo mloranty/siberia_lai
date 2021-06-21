@@ -43,4 +43,4 @@ all_sites[,3:26] <- as.numeric(unlist(all_sites[,3:26]))
 
 #writes all results to a csv
 setwd("/Volumes/data/data_repo/field_data/siberia_lai/hemisfer_outputs/")
-write.csv(all_sites,file = "all_sites_LAI_output.csv")
+write.csv(all_sites,file = "all_sites_LAI_hemi_output.csv")
