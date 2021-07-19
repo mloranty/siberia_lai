@@ -30,10 +30,8 @@ shrub.data$Leaf.Mass.g <- ifelse(shrub.data$Species == "Betula",
 shrubs.sla <- read.csv("data/allometry_data/SLA_trees_shrubs_2017.csv")
 
 #clean up extra columns
-shrubs.sla$SLA..cm2.g. <- NULL
-shrubs.sla$X <- NULL
-shrubs.sla$X.1 <- NULL
-shrubs.sla$SLA..m2.g. <- NULL
+shrubs.sla <- shrubs.sla[,c(1,3,6,8)]
+colnames(shrubs.sla) <- c("Site","Species","Mass","Total.Leaf.Area")
 
 #make column for SLA in cm^2/g
 shrubs.sla$SLA.cm2.g <- shrubs.sla$Total.Leaf.Area/shrubs.sla$Mass
@@ -72,28 +70,64 @@ shrub.data <- subset(shrub.data, select = -c(Leaf.Area.cm2))
 shrub.data$Site.Plot <- paste(shrub.data$Site,shrub.data$Plot,sep = ".")
 shrub.data <- shrub.data[,c(9,3,4,5,6,7,8)]
 
+#subset by species
+bet.data <- subset(shrub.data, Species == "Betula")
+sal.data <- subset(shrub.data, Species == "Salix")
+
+## betula
 #make new data frame to store total leaf area per each site and calculate LAI
 #sum leaf area per plot and plot area
-shrubs.sum <- aggregate(x = shrub.data["Leaf.Area.m2"],       #finds total leaf area per plot
-                        by = shrub.data[c("Site.Plot")],
+bet.sum <- aggregate(x = bet.data["Leaf.Area.m2"],       #finds total leaf area per plot
+                        by = bet.data[c("Site.Plot")],
                         FUN = sum
 )
 
-shrubs.site <- aggregate(x = shrub.data["Area.Sampled.m2"],   #takes plot area
-                         by = shrub.data[c("Site.Plot")],
+bet.site <- aggregate(x = bet.data["Area.Sampled.m2"],   #takes plot area
+                         by = bet.data[c("Site.Plot")],
                          FUN = mean,
                          simplify = TRUE
 )
-shrubs.sum$Area.Sampled.m2 <- shrubs.site$Area.Sampled.m2
+bet.sum$Area.Sampled.m2 <- bet.site$Area.Sampled.m2
 
 #add back column to indicate density
-shrubs.sum$Density <- ifelse(grepl("H",shrubs.sum$Site.Plot),paste("HIGH"),
-                            ifelse(grepl("M",shrubs.sum$Site.Plot),paste("MED"),
+bet.sum$Density <- ifelse(grepl("H",bet.sum$Site.Plot),paste("HIGH"),
+                            ifelse(grepl("M",bet.sum$Site.Plot),paste("MED"),
                                    paste("LOW")))
-shrubs.sum <- shrubs.sum[,c(1,4,2,3)]
+bet.sum <- bet.sum[,c(1,4,2,3)]
 
 #divide total leaf area per plot by plot area to get LAI!
-shrubs.sum$LAI.m2.m2 <- shrubs.sum$Leaf.Area.m2/shrubs.sum$Area.Sampled.m2
+bet.sum$LAI.m2.m2 <- bet.sum$Leaf.Area.m2/bet.sum$Area.Sampled.m2
+
+#add species column
+bet.sum$Species <- paste("BETULA")
+
+## salix
+sal.sum <- aggregate(x = sal.data["Leaf.Area.m2"],       #finds total leaf area per plot
+                        by = sal.data[c("Site.Plot")],
+                        FUN = sum
+)
+
+sal.site <- aggregate(x = sal.data["Area.Sampled.m2"],   #takes plot area
+                         by = sal.data[c("Site.Plot")],
+                         FUN = mean,
+                         simplify = TRUE
+)
+sal.sum$Area.Sampled.m2 <- sal.site$Area.Sampled.m2
+
+#add back column to indicate density
+sal.sum$Density <- ifelse(grepl("H",sal.sum$Site.Plot),paste("HIGH"),
+                             ifelse(grepl("M",sal.sum$Site.Plot),paste("MED"),
+                                    paste("LOW")))
+sal.sum <- sal.sum[,c(1,4,2,3)]
+
+#divide total leaf area per plot by plot area to get LAI!
+sal.sum$LAI.m2.m2 <- sal.sum$Leaf.Area.m2/sal.sum$Area.Sampled.m2
+
+#add species column
+sal.sum$Species <- paste("SALIX")
+
+#combine data frames for both shrub spp
+shrubs.sum <- rbind(bet.sum,sal.sum)
 #--------------------------------------------------------------------------------------------------------
 
 ## SECTION 2
@@ -176,6 +210,9 @@ trees.sum <- trees.sum[,c(1,4,2,3)]
 
 #divide total leaf area per plot by plot area to get LAI!
 trees.sum$LAI.m2.m2 <- trees.sum$Leaf.Area.m2/trees.sum$Area.Sampled.m2
+
+#add species column
+trees.sum$Species <- paste("LARIX")
 #--------------------------------------------------------------------------------------------------------
 
 ## SECTION 3
@@ -183,20 +220,26 @@ trees.sum$LAI.m2.m2 <- trees.sum$Leaf.Area.m2/trees.sum$Area.Sampled.m2
 
 #adds column to trees to denote tree data vs. shrub data
 trees.sum$Trees.or.Shrubs <- "TREES"
-trees.sum <- trees.sum[,c(1,2,6,3,4,5)]
+trees.sum <- trees.sum[,c(1,2,7,4,3,5,6)]
 
 #adds column to shrubs to denote tree data vs. shrub data
 shrubs.sum$Trees.or.Shrubs <- "SHRUBS"
-shrubs.sum <- shrubs.sum[,c(1,2,6,3,4,5)]
+shrubs.sum <- shrubs.sum[,c(1,2,7,4,3,5,6)]
 
-#combines shrubs LAI and trees LAI results with headers separating
+#combines shrubs LAI and trees LAI results 
 trees.and.shrubs <- rbind(shrubs.sum,trees.sum)
 
 #add column to denote sloped or flat site
 trees.and.shrubs$Slope <- ifelse(grepl("S",trees.and.shrubs$Site.Plot),paste("SLOPED"),paste("FLAT"))
-trees.and.shrubs <- trees.and.shrubs[,c(1,2,3,7,4,5,6)]
 
+#add column for site
+trees.and.shrubs$Site <- ifelse(nchar(trees.and.shrubs$Site.Plot) < 6,
+                                substr(trees.and.shrubs$Site.Plot,1,3),
+                                substr(trees.and.shrubs$Site.Plot,1,4))
+trees.and.shrubs <- trees.and.shrubs[,c(9,1,2,8,7,6,3,4,5)]
 
+#change column names for easier work
+colnames(trees.and.shrubs) <- c("Site","Plot","Density","Slope","Trees.Shrubs","Species","Leaf.Area","Area.Sampled","LAI")
 
 #write combined results to csv
 write.csv(trees.and.shrubs,"lai_allom_byplot.csv")
@@ -207,17 +250,17 @@ write.csv(trees.and.shrubs,"lai_allom_byplot.csv")
 
 #to read in summary results and split by trees and shrubs, uncomment and run next 3 lines:
 trees.and.shrubs <- read.csv("lai_allom_byplot.csv")
-trees.sum <- trees.and.shrubs[trees.and.shrubs$Trees.or.Shrubs == "TREES",]
-shrubs.sum <- trees.and.shrubs[trees.and.shrubs$Trees.or.Shrubs == "SHRUBS",]
+trees.sum <- trees.and.shrubs[trees.and.shrubs$Trees.Shrubs == "TREES",]
+shrubs.sum <- trees.and.shrubs[trees.and.shrubs$Trees.Shrubs == "SHRUBS",]
 
 
 ## LAI by Density (one-way ANOVAs) ##
 #one-way anova for trees LAI by density
-trees.dens.aov <- aov(LAI.m2.m2 ~ Density, data = trees.sum)z
+trees.dens.aov <- aov(LAI ~ Density, data = trees.sum)
 summary(trees.dens.aov)
 
 #one-way anova for shrubs LAI by density
-shrubs.dens.aov <- aov(LAI.m2.m2 ~ Density, data = shrubs.sum)
+shrubs.dens.aov <- aov(LAI ~ Density, data = shrubs.sum)
 summary(shrubs.dens.aov)
 
 #post-hoc tukey tests for trees and shrubs
@@ -228,21 +271,20 @@ shrubs.tuk <- TukeyHSD(shrubs.dens.aov)
 library(ggplot2)
 
 #trees LAI by density boxplot (one-way anova)
-ggplot(data = trees.sum, aes(Density,LAI.m2.m2,fill=Density)) +
+ggplot(data = trees.sum, aes(Density,LAI,fill=Density)) +
   geom_boxplot()
 
 #shrubs LAI by density boxplot
-ggplot(data = shrubs.sum, aes(Density,LAI.m2.m2,fill=Density)) +
+ggplot(data = shrubs.sum, aes(Density,LAI,fill=Density)) +
   geom_boxplot()
-
 
 ## LAI by Density + Slope (two-way ANOVAs) ##
 #two-way anova for trees LAI by density + slope
-trees.dslope.aov <- aov(LAI.m2.m2 ~ Density + Slope, data = trees.sum)
+trees.dslope.aov <- aov(LAI ~ Density + Slope, data = trees.sum)
 summary(trees.dslope.aov)
 
 #two-way anova for shrub LAI by density + slope
-shrubs.dslope.aov <- aov(LAI.m2.m2 ~ Density + Slope, data = shrubs.sum)
+shrubs.dslope.aov <- aov(LAI ~ Density + Slope, data = shrubs.sum)
 summary(shrubs.dslope.aov)
 
 #post-hoc tukey tests for trees and shrubs
@@ -254,10 +296,75 @@ TukeyHSD(shrubs.dslope.aov)
 #make new dataframe to compare tree LAI vs. shrub LAI vs. total LAI
 lai.comp <- trees.and.shrubs
 #add column for site only
-lai.comp$Site <- ifelse(nchar(lai.comp$Site.Plot) < 6,
-                             substr(lai.comp$Site.Plot,1,3),
-                             substr(lai.comp$Site.Plot,1,4))
+lai.comp$Site <- ifelse(nchar(lai.comp$Plot) < 6,
+                             substr(lai.comp$Plot,1,3),
+                             substr(lai.comp$Plot,1,4))
 #aggregate now by site and trees or shrubs
-lai.comp <- aggregate(lai.comp, list(lai.comp$Site, lai.comp$Trees.or.Shrubs), FUN = mean, na.rm = FALSE)
+lai.comp <- aggregate(lai.comp, list(lai.comp$Site, lai.comp$Trees.Shrubs), FUN = mean, na.rm = FALSE)
 
+#--------------------------------------------------------------------------------------------------------
 
+## SECTION 5
+## Format output for results section data table
+
+#split into different dfs for trees and shrubs
+shrubs.tab <- subset(trees.and.shrubs,Trees.Shrubs == "SHRUBS")
+trees.tab <- subset(trees.and.shrubs,Trees.Shrubs == "TREES")
+
+#mean tree lai per site by density (run whole chunk)
+lai.td <- aggregate(trees.tab$LAI,by=list(trees.tab$Site),FUN=mean)
+colnames(lai.td) <- c("Site","LAI")
+lai.td$Density <- ifelse(grepl("H",lai.td$Site),paste("HIGH"),
+                         ifelse(grepl("M",lai.td$Site),paste("MED"),
+                                paste("LOW")))
+lai.td.s <- aggregate(lai.td$LAI,by=list(lai.td$Density),FUN=mean)
+lai.td.sd <- aggregate(lai.td$LAI,by=list(lai.td$Density),FUN=sd)
+lai.td <- merge(lai.td.s,lai.td.sd,by="Group.1")
+colnames(lai.td) <- c("Density","LAI.s","LAI.sd")
+lai.td <- lai.td[c(1,3,2),]
+rm(lai.td.s,lai.td.sd)
+lai.td
+
+#mean salix shrub lai per site by density (run whole chunk)
+sal.tab <- subset(shrubs.tab,Species=="SALIX")
+lai.ssd <- aggregate(sal.tab$LAI,by=list(sal.tab$Site),FUN=mean)
+colnames(lai.ssd) <- c("Site","LAI")
+lai.ssd$Density <- ifelse(grepl("H",lai.ssd$Site),paste("HIGH"),
+                         ifelse(grepl("M",lai.ssd$Site),paste("MED"),
+                                paste("LOW")))
+lai.ssd.s <- aggregate(lai.ssd$LAI,by=list(lai.ssd$Density),FUN=mean)
+lai.ssd.sd <- aggregate(lai.ssd$LAI,by=list(lai.ssd$Density),FUN=sd)
+lai.ssd <- merge(lai.ssd.s,lai.ssd.sd,by="Group.1")
+colnames(lai.ssd) <- c("Density","LAI.s","LAI.sd")
+lai.ssd <- lai.ssd[c(1,3,2),]
+rm(lai.ssd.s,lai.ssd.sd,sal.tab)
+lai.ssd
+
+#mean betula shrub lai per site by density (run whole chunk)
+bet.tab <- subset(shrubs.tab,Species=="BETULA")
+lai.sbd <- aggregate(bet.tab$LAI,by=list(bet.tab$Site),FUN=mean)
+colnames(lai.sbd) <- c("Site","LAI")
+lai.sbd$Density <- ifelse(grepl("H",lai.sbd$Site),paste("HIGH"),
+                          ifelse(grepl("M",lai.sbd$Site),paste("MED"),
+                                 paste("LOW")))
+lai.sbd.s <- aggregate(lai.sbd$LAI,by=list(lai.sbd$Density),FUN=mean)
+lai.sbd.sd <- aggregate(lai.sbd$LAI,by=list(lai.sbd$Density),FUN=sd)
+lai.sbd <- merge(lai.sbd.s,lai.sbd.sd,by="Group.1")
+colnames(lai.sbd) <- c("Density","LAI.s","LAI.sd")
+lai.sbd <- lai.sbd[c(1,3,2),]
+rm(lai.sbd.s,lai.sbd.sd,bet.tab)
+lai.sbd
+
+#mean total shrub lai per site by density (run whole chunk)
+lai.sd <- aggregate(shrubs.tab$LAI,by=list(shrubs.tab$Site),FUN=mean)
+colnames(lai.sd) <- c("Site","LAI")
+lai.sd$Density <- ifelse(grepl("H",lai.sd$Site),paste("HIGH"),
+                          ifelse(grepl("M",lai.sd$Site),paste("MED"),
+                                 paste("LOW")))
+lai.sd.s <- aggregate(lai.sd$LAI,by=list(lai.sd$Density),FUN=mean)
+lai.sd.sd <- aggregate(lai.sd$LAI,by=list(lai.sd$Density),FUN=sd)
+lai.sd <- merge(lai.sd.s,lai.sd.sd,by="Group.1")
+colnames(lai.sd) <- c("Density","LAI.s","LAI.sd")
+lai.sd <- lai.sd[c(1,3,2),]
+rm(lai.sd.s,lai.sd.sd,shrubs.tab)
+lai.sd
