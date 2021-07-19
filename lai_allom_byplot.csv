@@ -1,4 +1,4 @@
-Site.Plot,Density,Trees.or.Shrubs,Slope,Leaf.Area.m2,Area.Sampled.m2,LAI.m2.m2
+Plot,Density,Trees.Shrubs,Slope,Leaf.Area,Area.Sampled,LAI
 DavH.1,HIGH,SHRUBS,FLAT,1.533284472,5,0.306656894
 DavH.2,HIGH,SHRUBS,FLAT,1.115652986,5,0.223130597
 DavH.3,HIGH,SHRUBS,FLAT,0.957707496,5,0.191541499
