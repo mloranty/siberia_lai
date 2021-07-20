@@ -1,4 +1,4 @@
-﻿Site,Plot,Area Sampled (m2),Species,BD_cm
+Site,Plot,Area Sampled (m2),Species,BD_cm
 HBR,1,20,Salix,0.41
 HBR,1,20,Salix,0.41
 HBR,1,20,Salix,0.21
@@ -1626,7 +1626,7 @@ MDF2,3,5,Betula,0.82
 MDF2,3,5,Betula,0.75
 MDF2,3,5,Betula,0.83
 MDF2,3,5,Betula,0.5
-MDF2,3,5,Betula,11
+MDF2,3,5,Betula,1.1
 MDF2,3,5,Betula,0.78
 MDF2,3,5,Betula,0.73
 MDF2,3,5,Betula,0.54
