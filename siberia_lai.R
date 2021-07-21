@@ -590,25 +590,26 @@ colnames(avsite.sum) <- c("Site","LAI")
 #merge with ndvi and evi values
 veg <- merge(sites.evi,sites.ndvi,by="Site") 
 lai.veg <- merge(veg,avsite.sum,by="Site")
+colnames(lai.veg) <- c("Site","EVI.s","EVI.sd","NDVI.s","NDVI.sd","LAI.s")
 
 #plot lai vs. ndvi and look at correlation
-ggplot(data = lai.veg, aes(x=LAI,y=nvs)) +
+ggplot(data = lai.veg, aes(x=LAI.s,y=NDVI.s)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean LAI (m²/m²)") +
   ylab("Mean NDVI")
 #look at correlation
-cor(lai.veg$nvs,lai.veg$LAI)
+cor(lai.veg$NDVI.s,lai.veg$LAI.s)
 
 #plot lai vs. evi and look at correlation
-ggplot(data = lai.veg, aes(x=LAI,y=evs)) +
+ggplot(data = lai.veg, aes(x=LAI.s,y=EVI.s)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean LAI (m²/m²)") +
   ylab("Mean EVI")
-
-cor(lai.veg$es,lai.veg$LAI)
+#look at correlation
+cor(lai.veg$EVI.s,lai.veg$LAI.s)
 
 #NDVI & EVI vs Shrub LAI & Tree LAI separately
