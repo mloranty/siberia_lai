@@ -6,7 +6,8 @@
 ## Loranty Lab
 ## Code by N.S. Bendavid
 
-##SECTION 1: ALLOMETRY ----------------------------------------------------------------------------------------------------------
+##SECTION 1: ALLOMETRY ==========================================================================================================
+
 # 1.1: Calculate LAI for shrubs -------------------------------------------------------------------------------------------------
 
 #read in shrub data
@@ -145,6 +146,9 @@ rm(sal.data)
 #combine data frames for both shrub spp
 shrubs.sum <- rbind(bet.sum,sal.sum)
 rm(bet.sum,sal.sum,bet.h.sla,bet.l.sla,sal.h.sla,sal.l.sla,shrubs.sla)
+
+
+
 # 1.2: Calculate LAI for trees --------------------------------------------------------------------------------------------------
 
 ## SECTION 2
@@ -232,6 +236,9 @@ trees.sum$LAI.m2.m2 <- trees.sum$Leaf.Area.m2/trees.sum$Area.Sampled.m2
 #add species column
 trees.sum$Species <- paste("LARIX")
 rm(lar.h.sla,lar.l.sla)
+
+
+
 # 1.3: Combine tree and shrub data ----------------------------------------------------------------------------------------------
 
 #adds column to trees to denote tree data vs. shrub data
@@ -259,12 +266,22 @@ colnames(trees.and.shrubs) <- c("Site","Plot","Density","Slope","Trees.Shrubs","
 
 #write combined results to csv
 write.csv(trees.and.shrubs,"lai_al_byplot.csv")
+
+
+
 # 1.4: Statistical analyses -----------------------------------------------------------------------------------------------------
 
-#to read in summary results and split by trees and shrubs, uncomment and run next 3 lines:
-trees.and.shrubs <- read.csv("lai_allom_byplot.csv")
+#split results by trees and shrubs for analyses
 trees.sum <- trees.and.shrubs[trees.and.shrubs$Trees.Shrubs == "TREES",]
 shrubs.sum <- trees.and.shrubs[trees.and.shrubs$Trees.Shrubs == "SHRUBS",]
+
+#make dataframe for total (tree+shrub) LAI by plot
+tot.sum <- aggregate(trees.and.shrubs$LAI,by=list(trees.and.shrubs$Plot),FUN=sum)
+colnames(tot.sum) <- c("Plot","LAI")
+#add column to indicate density
+tot.sum$Density <- ifelse(grepl("H",tot.sum$Plot),paste("HIGH"),
+                          ifelse(grepl("M",tot.sum$Plot),paste("MED"),
+                                 paste("LOW")))
 
 
 ## LAI by Density (one-way ANOVAs) ##
@@ -276,34 +293,56 @@ summary(trees.dens.aov)
 shrubs.dens.aov <- aov(LAI ~ Density, data = shrubs.sum)
 summary(shrubs.dens.aov)
 
-#post-hoc tukey tests for trees and shrubs
+#one-way anova for total (trees+shrubs) LAI by density
+tot.dens.aov <- aov(LAI ~ Density, data = tot.sum)
+summary(tot.dens.aov)
+
+#post-hoc tukey tests for trees, shrubs, and total
+#trees
 trees.tuk <- TukeyHSD(trees.dens.aov)
+trees.tuk
+#shrubs
 shrubs.tuk <- TukeyHSD(shrubs.dens.aov)
+shrubs.tuk
+#total (trees+shrubs)
+tot.tuk <- TukeyHSD(tot.dens.aov)
+tot.tuk
 
 #visualize anovas with boxplots using ggplot2
 library(ggplot2)
 
+#change Density column for each set to character and then back to factor assigning levels
+#this makes sure data will be ordered correctly on plots (HIGH, MED, LOW)
+#trees
+trees.sum$Density <- as.character(trees.sum$Density)
+trees.sum$Density <- factor(trees.sum$Density,levels=c("HIGH","MED","LOW"))
+#shrubs
+shrubs.sum$Density <- as.character(shrubs.sum$Density)
+shrubs.sum$Density <- factor(shrubs.sum$Density,levels=c("HIGH","MED","LOW"))
+#total (trees+shrubs)
+tot.sum$Density <- as.character(tot.sum$Density)
+tot.sum$Density <- factor(tot.sum$Density,levels=c("HIGH","MED","LOW"))
+
 #trees LAI by density boxplot (one-way anova)
 ggplot(data = trees.sum, aes(Density,LAI,fill=Density)) +
-  geom_boxplot()
+  geom_boxplot() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  xlab("Stand Density") +
+  ylab("Leaf Area Index (m²/m²)") +
+  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))
 
 #shrubs LAI by density boxplot
 ggplot(data = shrubs.sum, aes(Density,LAI,fill=Density)) +
-  geom_boxplot()
+  geom_boxplot() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  xlab("Stand Density") +
+  ylab("Leaf Area Index (m²/m²)") +
+  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))
 
-## LAI by Density + Slope (two-way ANOVAs) ##
-#two-way anova for trees LAI by density + slope
-trees.dslope.aov <- aov(LAI ~ Density + Slope, data = trees.sum)
-summary(trees.dslope.aov)
 
-#two-way anova for shrub LAI by density + slope
-shrubs.dslope.aov <- aov(LAI ~ Density + Slope, data = shrubs.sum)
-summary(shrubs.dslope.aov)
-
-#post-hoc tukey tests for trees and shrubs
-TukeyHSD(trees.dslope.aov)
-TukeyHSD(shrubs.dslope.aov)
-# 1.5: Summary statistics and data Table ----------------------------------------------------------------------------------------
+# 1.5: Summary statistics and data table ----------------------------------------------------------------------------------------
 
 #split into different dfs for trees and shrubs
 shrubs.tab <- subset(trees.and.shrubs,Trees.Shrubs == "SHRUBS")
@@ -377,7 +416,10 @@ lai.tab <- lai.tab[c(1,3,2),]
 rm(lai.tab.1,lai.tab.2,lai.tab.3)
 lai.tab
 
-##SECTION 2: HEMISPHERICAL PHOTOGRAPHS ------------------------------------------------------------------------------------------
+
+
+##SECTION 2: HEMISPHERICAL PHOTOGRAPHS ==========================================================================================
+
 # 2.1: Process Hemisfer output files --------------------------------------------------------------------------------------------
 #set working directory to folder containing all hemi-photo outputs
 setwd("/Volumes/data/data_repo/field_data/siberia_lai/hemisfer_outputs/all_sites/")
@@ -426,7 +468,14 @@ all_sites[,3:26] <- as.numeric(unlist(all_sites[,3:26]))
 setwd("/Volumes/data/data_repo/field_data/siberia_lai/hemisfer_outputs/")
 write.csv(all_sites,file = "all_sites_LAI_hemi_output.csv")
 
-##SECTION 3: VEGETATION INDEXES -------------------------------------------------------------------------------------------------
+
+
+# 2.2: Statistical Analyses -----------------------------------------------------------------------------------------------------
+
+
+
+##SECTION 3: VEGETATION INDEXES =================================================================================================
+
 # 3.1: Create buffers, calculate NDVI & EVI -------------------------------------------------------------------------------------
 library(raster)
 library(rgdal)
@@ -464,4 +513,7 @@ sites.evi <- subset(sites.evi, den.Type == "DG")
 # rename columns
 colnames(sites.ndvi) <- c("Site","Type","nvs","nvsd")
 colnames(sites.evi) <- c("Site","Type","es","esd")
+
+
+
 # 3.2: Compare with allometry LAI data ------------------------------------------------------------------------------------------
