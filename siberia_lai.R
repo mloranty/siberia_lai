@@ -4,7 +4,7 @@
 ## This code is the analysis of LAI data from field sites near Cherskiy, Russia
 ## Colgate University
 ## Loranty Lab
-## Code by N.S. Bendavid
+## Code by N. Bendavid
 
 ##SECTION 1: ALLOMETRY ==========================================================================================================
 
@@ -539,11 +539,13 @@ e <- raster("L:/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/201
 
 #read stand data
 den <- read.csv("L:/projects/siberia_lai/cherskiy_stand_data.csv", header=T)
+den <- subset(den, Type == "DG")
 
+#create SpatialPointsDataFrame out of coords
 d <- SpatialPointsDataFrame(den[,5:4],den,
                             proj4string = CRS('+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'))
 
-#create 15m buffers 
+#extract NDVI with 15m buffers 
 nv <- extract(n,d,buffer=15,na.rm=T)
 ev <- extract(e,d,buffer=15,na.rm=T)
 
@@ -556,19 +558,56 @@ evs <- unlist(lapply(ev,FUN="mean"))
 evsd <- unlist(lapply(ev,FUN="sd"))
 
 #add to data frames with site names
-sites.ndvi <- data.frame(den$Site,den$Type,nvs,nvsd)
-sites.evi <- data.frame(den$Site,den$Type,evs,evsd)
-
-#remove irrelevant sites 
-sites.ndvi <- subset(sites.ndvi, den.Type == "DG")
-sites.evi <- subset(sites.evi, den.Type == "DG")
+sites.ndvi <- data.frame(den$Site,nvs,nvsd)
+sites.evi <- data.frame(den$Site,evs,evsd)
 
 #rename columns
-colnames(sites.ndvi) <- c("Site","Type","nvs","nvsd")
-colnames(sites.evi) <- c("Site","Type","es","esd")
+colnames(sites.ndvi) <- c("Site","nvs","nvsd")
+colnames(sites.evi) <- c("Site","es","esd")
+
+#rename "DAV" site to "DavH"
+sites.ndvi$Site <- sub("Dav","DavH",sites.ndvi$Site)
+sites.evi$Site <- sub("Dav","DavH",sites.evi$Site)
 
 
 
 # 3.2: Compare with allometry LAI data ------------------------------------------------------------------------------------------
 
 #use allometry data from section 1.4 to compare with vegetation indexes
+alveg.sum <- tot.sum
+#add column for site
+alveg.sum$Site <- ifelse(nchar(alveg.sum$Plot) < 6,
+                         substr(alveg.sum$Plot,1,3),
+                         substr(alveg.sum$Plot,1,4))
+
+#aggregate to find mean LAI per site
+avsite.sum <- aggregate(alveg.sum$LAI,by=list(alveg.sum$Site),FUN=mean)
+colnames(avsite.sum) <- c("Site","LAI")
+
+#merge with ndvi and evi values
+veg <- merge(sites.evi,sites.ndvi,by="Site") 
+lai.veg <- merge(veg,alveg.sum,by="Site")
+
+#remove some columns
+lai.veg <- lai.veg[,c(1,8,2,4,7)]
+colnames(lai.veg) <- c("Site","Density","EVI.s","NDVI.s","LAI.s")
+
+#plot lai vs. ndvi and look at correlation
+ggplot(data = lai.veg, aes(x=LAI.s,y=NDVI.s)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean LAI (m²/m²)") +
+  ylab("Mean NDVI")
+#look at correlation
+cor(lai.veg$NDVI.s,lai.veg$LAI.s)
+
+#plot lai vs. evi and look at correlation
+ggplot(data = lai.veg, aes(x=LAI.s,y=EVI.s)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean LAI (m²/m²)") +
+  ylab("Mean EVI")
+
+cor(lai.veg$EVI.s,lai.veg$LAI.s)
