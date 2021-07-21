@@ -283,7 +283,6 @@ tot.sum$Density <- ifelse(grepl("H",tot.sum$Plot),paste("HIGH"),
                           ifelse(grepl("M",tot.sum$Plot),paste("MED"),
                                  paste("LOW")))
 
-
 ## LAI by Density (one-way ANOVAs) ##
 #one-way anova for trees LAI by density
 trees.dens.aov <- aov(LAI ~ Density, data = trees.sum)
@@ -422,14 +421,14 @@ lai.tab
 
 # 2.1: Process Hemisfer output files --------------------------------------------------------------------------------------------
 #set working directory to folder containing all hemi-photo outputs
-setwd("/Volumes/data/data_repo/field_data/siberia_lai/hemisfer_outputs/all_sites/")
+setwd("")
 
 #list the names of the files in the folder for use in for loop
 files <- list.files()
 
 #create a blank dataframe with named columns - for loop will dump rows into this dataframe
-all_sites <- data.frame(matrix(nrow = 0,ncol = 26))
-colnames(all_sites) <- c("File","Date.Time","Mill","LiCor","Lang","G","NC","T","Mill-S","LiCor-S","Lang-S","G-S","NC-S","T-S","Mill-C","LiCor-C","Lang-C","G-C","NC-C","T-C","Mill-SC","LiCor-SC","Lang-SC","G-SC","NC-SC","T-SC")
+all.sites <- data.frame(matrix(nrow = 0,ncol = 26))
+colnames(all.sites) <- c("File","Date.Time","Mill","LiCor","Lang","G","NC","T","Mill-S","LiCor-S","Lang-S","G-S","NC-S","T-S","Mill-C","LiCor-C","Lang-C","G-C","NC-C","T-C","Mill-SC","LiCor-SC","Lang-SC","G-SC","NC-SC","T-SC")
 
 #runs each file in the folder through
 for (i in files) {
@@ -458,21 +457,75 @@ for (i in files) {
   #combines vectors to make one long row
   row <- c(file.datetime,no.corr,S.corr,C.corr,SC.corr)
   #inserts row into blank dataframe
-  all_sites[nrow(all_sites) + 1,] <- row
+  all.sites[nrow(all.sites) + 1,] <- row
 }
 
 #converts all LAI values from characters back to numeric
-all_sites[,3:26] <- as.numeric(unlist(all_sites[,3:26]))
+all.sites[,3:26] <- as.numeric(unlist(all.sites[,3:26]))
 
 #writes all results to a csv
 setwd("/Volumes/data/data_repo/field_data/siberia_lai/hemisfer_outputs/")
-write.csv(all_sites,file = "all_sites_LAI_hemi_output.csv")
+write.csv(all.sites,file = "all_sites_LAI_hemi_output.csv")
 
+#all.sites <- read.csv("L:\\data_repo\\field_data\\siberia_lai\\hemisfer_outputs\\all_sites_LAI_hemi_output.csv")
 
 
 # 2.2: Statistical Analyses -----------------------------------------------------------------------------------------------------
 
+#add a column to the sites table that indicates the Site name from the filename
+all.sites$Site <- ifelse(nchar(as.character(all.sites$File))<=18,
+                         substr(all.sites$File,1,3),
+                         substr(all.sites$File,1,4))
 
+#rename DAV site to DavH
+all.sites$Site <- sub("DAV","DavH",all.sites$Site)
+
+#add column that indicates density
+all.sites$Density <- ifelse(grepl("H",all.sites$Site),paste("HIGH"),
+                               ifelse(grepl("M",all.sites$Site),paste("MED"),
+                                      paste("LOW")))
+
+#remove unecessary columns, keep Site, File, Density LiCor+C, Thim+C
+hemi.sum <- all.sites[,c(27,1,28,16,20)]
+colnames(hemi.sum) <- c("Site","File","Density","LiCor","Thim")
+
+#one-way ANOVAs for LAI by density, one for each method, LiCor & Thim
+#LiCor
+li.dens.aov <- aov(LiCor ~ Density, data = hemi.sum)
+summary(li.dens.aov)
+#Thim
+th.dens.aov <- aov(Thim ~ Density, data = hemi.sum)
+summary(th.dens.aov)
+
+#post-hoc Tukey's tests for LiCor & Thim
+#LiCor
+li.tuk <- TukeyHSD(li.dens.aov)
+li.tuk
+#Thim
+th.tuk <- TukeyHSD(th.dens.aov)
+th.tuk
+
+#convert to factor and set levels
+hemi.sum$Density <- as.character(hemi.sum$Density)
+hemi.sum$Density <- factor(hemi.sum$Density,levels=c("HIGH","MED","LOW"))
+
+#create boxplots for each method LiCor & Thim
+#LiCor
+ggplot(data = hemi.sum, aes(Density,LiCor,fill=Density)) +
+  geom_boxplot() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  xlab("Stand Density") +
+  ylab("Leaf Area Index (m²/m²)") +
+  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))
+#Thim
+ggplot(data = hemi.sum, aes(Density,Thim,fill=Density)) +
+  geom_boxplot() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  xlab("Stand Density") +
+  ylab("Leaf Area Index (m²/m²)") +
+  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))
 
 ##SECTION 3: VEGETATION INDEXES =================================================================================================
 
@@ -502,18 +555,20 @@ nvsd <- unlist(lapply(nv,FUN="sd"))
 evs <- unlist(lapply(ev,FUN="mean"))
 evsd <- unlist(lapply(ev,FUN="sd"))
 
-# add to data frames with site names
+#add to data frames with site names
 sites.ndvi <- data.frame(den$Site,den$Type,nvs,nvsd)
 sites.evi <- data.frame(den$Site,den$Type,evs,evsd)
 
-# remove irrelevant sites 
+#remove irrelevant sites 
 sites.ndvi <- subset(sites.ndvi, den.Type == "DG")
 sites.evi <- subset(sites.evi, den.Type == "DG")
 
-# rename columns
+#rename columns
 colnames(sites.ndvi) <- c("Site","Type","nvs","nvsd")
 colnames(sites.evi) <- c("Site","Type","es","esd")
 
 
 
 # 3.2: Compare with allometry LAI data ------------------------------------------------------------------------------------------
+
+#use allometry data from section 1.4 to compare with vegetation indexes
