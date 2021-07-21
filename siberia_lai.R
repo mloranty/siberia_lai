@@ -265,7 +265,7 @@ trees.and.shrubs <- trees.and.shrubs[,c(9,1,2,8,3,4,5,6,7)]
 colnames(trees.and.shrubs) <- c("Site","Plot","Density","Slope","Trees.Shrubs","Species","Leaf.Area","Area.Sampled","LAI")
 
 #write combined results to csv
-write.csv(trees.and.shrubs,"lai_al_byplot.csv")
+write.csv(trees.and.shrubs,"lai_allom_byplot.csv")
 
 
 
@@ -468,7 +468,7 @@ setwd("/Volumes/data/data_repo/field_data/siberia_lai/hemisfer_outputs/")
 write.csv(all.sites,file = "all_sites_LAI_hemi_output.csv")
 
 #all.sites <- read.csv("L:\\data_repo\\field_data\\siberia_lai\\hemisfer_outputs\\all_sites_LAI_hemi_output.csv")
-
+#(MAC) all.sites <- read.csv("/Volumes/data/data_repo/field_data/siberia_lai/hemisfer_outputs/all_sites_LAI_hemi_output.csv")
 
 # 2.2: Statistical Analyses -----------------------------------------------------------------------------------------------------
 
@@ -535,10 +535,13 @@ library(rgdal)
 
 #read NDVI & EVI files
 n <- raster("L:/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_NDVI.tif")
+#(MAC) n <- raster("/Volumes/data/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_NDVI.tif")
 e <- raster("L:/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_EVI.tif")
+#(MAC) e <- raster("/Volumes/data/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_EVI.tif")
 
 #read stand data
 den <- read.csv("L:/projects/siberia_lai/cherskiy_stand_data.csv", header=T)
+#(MAC) den <- read.csv("/Volumes/data/projects/siberia_lai/cherskiy_stand_data.csv", header=T)
 den <- subset(den, Type == "DG")
 
 #create SpatialPointsDataFrame out of coords
@@ -586,28 +589,26 @@ colnames(avsite.sum) <- c("Site","LAI")
 
 #merge with ndvi and evi values
 veg <- merge(sites.evi,sites.ndvi,by="Site") 
-lai.veg <- merge(veg,alveg.sum,by="Site")
-
-#remove some columns
-lai.veg <- lai.veg[,c(1,8,2,4,7)]
-colnames(lai.veg) <- c("Site","Density","EVI.s","NDVI.s","LAI.s")
+lai.veg <- merge(veg,avsite.sum,by="Site")
 
 #plot lai vs. ndvi and look at correlation
-ggplot(data = lai.veg, aes(x=LAI.s,y=NDVI.s)) +
+ggplot(data = lai.veg, aes(x=LAI,y=nvs)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean LAI (m²/m²)") +
   ylab("Mean NDVI")
 #look at correlation
-cor(lai.veg$NDVI.s,lai.veg$LAI.s)
+cor(lai.veg$nvs,lai.veg$LAI)
 
 #plot lai vs. evi and look at correlation
-ggplot(data = lai.veg, aes(x=LAI.s,y=EVI.s)) +
+ggplot(data = lai.veg, aes(x=LAI,y=evs)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean LAI (m²/m²)") +
   ylab("Mean EVI")
 
-cor(lai.veg$EVI.s,lai.veg$LAI.s)
+cor(lai.veg$es,lai.veg$LAI)
+
+#NDVI & EVI vs Shrub LAI & Tree LAI separately
