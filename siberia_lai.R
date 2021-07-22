@@ -542,13 +542,14 @@ e <- raster("L:/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/201
 #read stand data
 den <- read.csv("L:/projects/siberia_lai/cherskiy_stand_data.csv", header=T)
 #(MAC) den <- read.csv("/Volumes/data/projects/siberia_lai/cherskiy_stand_data.csv", header=T)
+#remove irrelevant sites
 den <- subset(den, Type == "DG")
 
 #create SpatialPointsDataFrame out of coords
 d <- SpatialPointsDataFrame(den[,5:4],den,
                             proj4string = CRS('+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'))
 
-#extract NDVI with 15m buffers 
+#extract NDVI & EVI with 15m buffers 
 nv <- extract(n,d,buffer=15,na.rm=T)
 ev <- extract(e,d,buffer=15,na.rm=T)
 
@@ -577,39 +578,82 @@ sites.evi$Site <- sub("Dav","DavH",sites.evi$Site)
 # 3.2: Compare with allometry LAI data ------------------------------------------------------------------------------------------
 
 #use allometry data from section 1.4 to compare with vegetation indexes
-alveg.sum <- tot.sum
-#add column for site
-alveg.sum$Site <- ifelse(nchar(alveg.sum$Plot) < 6,
-                         substr(alveg.sum$Plot,1,3),
-                         substr(alveg.sum$Plot,1,4))
 
-#aggregate to find mean LAI per site
-avsite.sum <- aggregate(alveg.sum$LAI,by=list(alveg.sum$Site),FUN=mean)
-colnames(avsite.sum) <- c("Site","LAI")
+#find mean shrub LAI per site
+shrubsv.sum <- aggregate(shrubs.sum$LAI,by=list(shrubs.sum$Site),FUN=mean)
+colnames(shrubsv.sum) <- c("Site","LAI")
+
+#find mean tree LAI per site
+treesv.sum <- aggregate(trees.sum$LAI,by=list(trees.sum$Site),FUN=mean)
+colnames(treesv.sum) <- c("Site","LAI")
+
+#merge tree and shrub dataframes, find total LAI per site
+totv.sum <- merge(treesv.sum,shrubsv.sum,by="Site")
+colnames(totv.sum) <- c("Site","Tree.LAI.s","Shrub.LAI.s")
+#find total lai (trees+shrubs)
+totv.sum$Tot.LAI.s <- totv.sum$Tree.LAI.s + totv.sum$Shrub.LAI.s
 
 #merge with ndvi and evi values
 veg <- merge(sites.evi,sites.ndvi,by="Site") 
-lai.veg <- merge(veg,avsite.sum,by="Site")
-colnames(lai.veg) <- c("Site","EVI.s","EVI.sd","NDVI.s","NDVI.sd","LAI.s")
+lai.veg <- merge(veg,totv.sum,by="Site")
+colnames(lai.veg) <- c("Site","EVI.s","EVI.sd","NDVI.s","NDVI.sd","Tree.LAI.s","Shrub.LAI.s","Tot.LAI.s")
 
-#plot lai vs. ndvi and look at correlation
-ggplot(data = lai.veg, aes(x=LAI.s,y=NDVI.s)) +
+#next, w/ggplot plot ndvi and evi vs. tree LAI, shrub LAI, and total LAI
+library(ggplot2)
+library(ggpubr)
+
+#ndvi vs. lai
+#plot tree lai vs. ndvi w/correlation
+ggplot(data = lai.veg, aes(x=Tree.LAI.s,y=NDVI.s)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Tree LAI (m²/m²)") +
+  ylab("Mean NDVI") +
+  stat_cor(method = "pearson",label.x = 1.5,label.y = 0.71)
+
+#plot shrub lai vs. ndvi w/correlation
+ggplot(data = lai.veg, aes(x=Shrub.LAI.s,y=NDVI.s)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Shrub LAI (m²/m²)") +
+  ylab("Mean NDVI") +
+  stat_cor(method = "pearson",label.x = 0.25,label.y = 0.71)
+
+#plot total lai vs. ndvi w/correlation
+ggplot(data = lai.veg, aes(x=Tot.LAI.s,y=NDVI.s)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean LAI (m²/m²)") +
-  ylab("Mean NDVI")
-#look at correlation
-cor(lai.veg$NDVI.s,lai.veg$LAI.s)
+  ylab("Mean NDVI") +
+  stat_cor(method = "pearson",label.x = 1.7,label.y = 0.71)
 
-#plot lai vs. evi and look at correlation
-ggplot(data = lai.veg, aes(x=LAI.s,y=EVI.s)) +
+#evi vs. lai
+#plot tree lai vs. evi w/correlation
+ggplot(data = lai.veg, aes(x=Tree.LAI.s,y=EVI.s)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Tree LAI (m²/m²)") +
+  ylab("Mean EVI") +
+  stat_cor(method = "pearson",label.x = 1.5,label.y = 0.31)
+
+#plot shrub lai vs. evi w/correlation
+ggplot(data = lai.veg, aes(x=Shrub.LAI.s,y=EVI.s)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Shrub LAI (m²/m²)") +
+  ylab("Mean EVI") +
+  stat_cor(method = "pearson",label.x = 0.25,label.y = 0.3)
+
+#plot total lai vs. evi w/correlation
+ggplot(data = lai.veg, aes(x=Tot.LAI.s,y=EVI.s)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean LAI (m²/m²)") +
-  ylab("Mean EVI")
-#look at correlation
-cor(lai.veg$EVI.s,lai.veg$LAI.s)
-
-#NDVI & EVI vs Shrub LAI & Tree LAI separately
+  ylab("Mean EVI") +
+  stat_cor(method = "pearson",label.x = 1.7,label.y = 0.31)
