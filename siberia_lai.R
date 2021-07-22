@@ -702,3 +702,27 @@ ggplot(data = lai.veg, aes(x=Tot.LAI.s,y=EVI.s)) +
   xlab("Mean LAI (m²/m²)") +
   ylab("Mean EVI") +
   stat_cor(method = "pearson",label.x = 1.5,label.y = 0.31)
+
+#test relationship between total shrub lai and ndvi/evi for low density sites
+lai.veg$Density <- ifelse(grepl("H",lai.veg$Site),paste("HIGH"),
+                          ifelse(grepl("M",lai.veg$Site),paste("MED"),
+                                 paste("LOW")))
+lai.veg.l <- subset(lai.veg,lai.veg$Density == "LOW")
+
+#plot low density sites shrub lai vs. ndvi w/correlation
+ggplot(data = lai.veg.l, aes(x=Shrub.LAI.s,y=NDVI.s)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Shrub LAI (m²/m²)") +
+  ylab("Mean NDVI") +
+  stat_cor(method = "pearson",label.x = 0.5, label.y = 0.725)
+
+#plot low density sites shrub lai vs. evi w/correlation
+ggplot(data = lai.veg.l, aes(x=Shrub.LAI.s,y=EVI.s)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Shrub LAI (m²/m²)") +
+  ylab("Mean EVI") +
+  stat_cor(method = "pearson",label.x = 0.5,label.y = 0.31)
