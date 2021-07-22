@@ -328,8 +328,9 @@ ggplot(data = trees.sum, aes(Density,LAI,fill=Density)) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black"))+
   xlab("Stand Density") +
-  ylab("Leaf Area Index (m²/m²)") +
-  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))
+  ylab("Mean Tree LAI (m²/m²)") +
+  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))+
+  theme(legend.position = "none")
 
 #shrubs LAI by density boxplot
 ggplot(data = shrubs.sum, aes(Density,LAI,fill=Density)) +
@@ -337,9 +338,33 @@ ggplot(data = shrubs.sum, aes(Density,LAI,fill=Density)) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black"))+
   xlab("Stand Density") +
-  ylab("Leaf Area Index (m²/m²)") +
-  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))
+  ylab("Mean Shrub LAI (m²/m²)") +
+  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))+
+  theme(legend.position = "none")
 
+#total (trees+shrubs) LAI by density boxplot
+ggplot(data = tot.sum, aes(Density,LAI,fill=Density)) +
+  geom_boxplot() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  xlab("Stand Density") +
+  ylab("Mean Total LAI (m²/m²)") +
+  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9")) +
+  theme(legend.position = "none")
+
+#make regression of tree vs. shrub LAI by plot
+#sum 
+shrubs.sum.sb <- aggregate(shrubs.sum$LAI,by=list(shrubs.sum$Plot),FUN=sum)
+colnames(shrubs.sum.sb) <- c("Plot","LAI")
+trees.v.shrubs <- merge(shrubs.sum.sb,trees.sum[,c(2,9)],by="Plot")
+colnames(trees.v.shrubs) <- c("Plot","Tree.LAI.s","Shrub.LAI.s")
+ggplot(data = trees.v.shrubs,aes(Tree.LAI.s,Shrub.LAI.s)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  xlab("Mean Tree LAI (m²/m²)") +
+  ylab("Mean Shrub LAI (m²/m²)")
 
 # 1.5: Summary statistics and data table ----------------------------------------------------------------------------------------
 
@@ -516,16 +541,30 @@ ggplot(data = hemi.sum, aes(Density,LiCor,fill=Density)) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black"))+
   xlab("Stand Density") +
-  ylab("Leaf Area Index (m²/m²)") +
-  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))
+  ylab("Mean Leaf Area Index (m²/m²)") +
+  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))+
+  theme(legend.position = "none")
 #Thim
 ggplot(data = hemi.sum, aes(Density,Thim,fill=Density)) +
   geom_boxplot() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black"))+
   xlab("Stand Density") +
-  ylab("Leaf Area Index (m²/m²)") +
-  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))
+  ylab("Mean Leaf Area Index (m²/m²)") +
+  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))+
+  theme(legend.position = "none")
+
+#create table showing both hemi photo methods and allometry tree LAI
+trees.site <- aggregate(trees.sum$LAI,by=list(trees.sum$Site),FUN=mean)
+colnames(trees.site) <- c("Site","Tree.LAI.s")
+licor.site <- aggregate(hemi.sum$LiCor,by=list(hemi.sum$Site),FUN=mean)
+colnames(licor.site) <- c("Site","LiCor.LAI.s")
+thim.site <- aggregate(hemi.sum$Thim,by=list(hemi.sum$Site),FUN=mean)
+colnames(thim.site) <- c("Site","Thim.LAI.s")
+licor.thim <- merge(licor.site,thim.site,by="Site")
+hemi.v.tree <- merge(licor.thim,trees.site,by="Site")
+rm(trees.site,licor.site,licor.thim,thim.site)
+write.csv(hemi.v.tree,file = "C:/Users/nbendavid/Documents/siberia_lai/data/hemi_vs_tree_table.csv") 
 
 ##SECTION 3: VEGETATION INDEXES =================================================================================================
 
@@ -580,7 +619,10 @@ sites.evi$Site <- sub("Dav","DavH",sites.evi$Site)
 #use allometry data from section 1.4 to compare with vegetation indexes
 
 #find mean shrub LAI per site
-shrubsv.sum <- aggregate(shrubs.sum$LAI,by=list(shrubs.sum$Site),FUN=mean)
+shrubs.sum.sb$Site <- ifelse(nchar(shrubs.sum.sb$Plot) < 6,
+                             substr(shrubs.sum.sb$Plot,1,3),
+                             substr(shrubs.sum.sb$Plot,1,4))
+shrubsv.sum <- aggregate(shrubs.sum.sb$LAI,by=list(shrubs.sum.sb$Site),FUN=mean)
 colnames(shrubsv.sum) <- c("Site","LAI")
 
 #find mean tree LAI per site
@@ -610,7 +652,7 @@ ggplot(data = lai.veg, aes(x=Tree.LAI.s,y=NDVI.s)) +
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean Tree LAI (m²/m²)") +
   ylab("Mean NDVI") +
-  stat_cor(method = "pearson",label.x = 1.5,label.y = 0.71)
+  stat_cor(method = "pearson",label.x = 1.2,label.y = 0.71)
 
 #plot shrub lai vs. ndvi w/correlation
 ggplot(data = lai.veg, aes(x=Shrub.LAI.s,y=NDVI.s)) +
@@ -619,7 +661,8 @@ ggplot(data = lai.veg, aes(x=Shrub.LAI.s,y=NDVI.s)) +
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean Shrub LAI (m²/m²)") +
   ylab("Mean NDVI") +
-  stat_cor(method = "pearson",label.x = 0.25,label.y = 0.71)
+  stat_cor(method = "pearson",label.x = 0.36,label.y = 0.71)+
+  geom_smooth(method = lm)
 
 #plot total lai vs. ndvi w/correlation
 ggplot(data = lai.veg, aes(x=Tot.LAI.s,y=NDVI.s)) +
@@ -628,7 +671,7 @@ ggplot(data = lai.veg, aes(x=Tot.LAI.s,y=NDVI.s)) +
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean LAI (m²/m²)") +
   ylab("Mean NDVI") +
-  stat_cor(method = "pearson",label.x = 1.7,label.y = 0.71)
+  stat_cor(method = "pearson",label.x = 1.5,label.y = 0.71)
 
 #evi vs. lai
 #plot tree lai vs. evi w/correlation
@@ -638,7 +681,7 @@ ggplot(data = lai.veg, aes(x=Tree.LAI.s,y=EVI.s)) +
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean Tree LAI (m²/m²)") +
   ylab("Mean EVI") +
-  stat_cor(method = "pearson",label.x = 1.5,label.y = 0.31)
+  stat_cor(method = "pearson",label.x = 1.2,label.y = 0.31)
 
 #plot shrub lai vs. evi w/correlation
 ggplot(data = lai.veg, aes(x=Shrub.LAI.s,y=EVI.s)) +
@@ -647,7 +690,9 @@ ggplot(data = lai.veg, aes(x=Shrub.LAI.s,y=EVI.s)) +
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean Shrub LAI (m²/m²)") +
   ylab("Mean EVI") +
-  stat_cor(method = "pearson",label.x = 0.25,label.y = 0.3)
+  stat_cor(method = "pearson",label.x = 0.4,label.y = 0.3) +
+  geom_smooth(method = lm)
+  
 
 #plot total lai vs. evi w/correlation
 ggplot(data = lai.veg, aes(x=Tot.LAI.s,y=EVI.s)) +
@@ -656,4 +701,4 @@ ggplot(data = lai.veg, aes(x=Tot.LAI.s,y=EVI.s)) +
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean LAI (m²/m²)") +
   ylab("Mean EVI") +
-  stat_cor(method = "pearson",label.x = 1.7,label.y = 0.31)
+  stat_cor(method = "pearson",label.x = 1.5,label.y = 0.31)
