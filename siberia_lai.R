@@ -1,4 +1,6 @@
-####    Siberia Tree & Shrub LAI Calculations
+####    Siberia Tree & Shrub LAI Calculations -----------------------------------------------------------------------------------
+# Hit Alt+O (Windows) or ⌘+⌥+O (Mac) to collapse this code into subsections
+
 #Project Info -------------------------------------------------------------------------------------------------------------------
 
 ## This code is the analysis of LAI data from field sites near Cherskiy, Russia
@@ -269,7 +271,7 @@ write.csv(trees.and.shrubs,"lai_allom_byplot.csv")
 
 
 
-# 1.4: Statistical analyses -----------------------------------------------------------------------------------------------------
+# 1.4: Statistical analyses & figures -------------------------------------------------------------------------------------------
 
 #split results by trees and shrubs for analyses
 trees.sum <- trees.and.shrubs[trees.and.shrubs$Trees.Shrubs == "TREES",]
@@ -283,13 +285,32 @@ tot.sum$Density <- ifelse(grepl("H",tot.sum$Plot),paste("HIGH"),
                           ifelse(grepl("M",tot.sum$Plot),paste("MED"),
                                  paste("LOW")))
 
+#make dataframe for total shrub lai by plot
+shrubs.sum.sb <- aggregate(shrubs.sum$LAI,by=list(shrubs.sum$Plot),FUN=sum)
+colnames(shrubs.sum.sb) <- c("Plot","LAI")
+shrubs.sum.sb$Density <- ifelse(grepl("H",shrubs.sum.sb$Plot),paste("HIGH"),
+                                   ifelse(grepl("M",shrubs.sum.sb$Plot),paste("MED"),
+                                          paste("LOW")))
+
+#make dataframes for shrubs separated by genera
+sal.sum <- subset(shrubs.sum,Species=="SALIX")
+bet.sum <- subset(shrubs.sum,Species=="BETULA")
+
 ## LAI by Density (one-way ANOVAs) ##
 #one-way anova for trees LAI by density
 trees.dens.aov <- aov(LAI ~ Density, data = trees.sum)
 summary(trees.dens.aov)
 
+#one-way anova for salix shrubs LAI by density
+sal.dens.aov <- aov(LAI ~ Density, data = sal.sum)
+summary(sal.dens.aov)
+
+#one-way anova for betula shrubs LAI by density
+bet.dens.aov <- aov(LAI ~ Density, data = bet.sum)
+summary(bet.dens.aov)
+
 #one-way anova for shrubs LAI by density
-shrubs.dens.aov <- aov(LAI ~ Density, data = shrubs.sum)
+shrubs.dens.aov <- aov(LAI ~ Density, data = shrubs.sum.sb)
 summary(shrubs.dens.aov)
 
 #one-way anova for total (trees+shrubs) LAI by density
@@ -300,7 +321,10 @@ summary(tot.dens.aov)
 #trees
 trees.tuk <- TukeyHSD(trees.dens.aov)
 trees.tuk
-#shrubs
+#betula shrubs
+bet.tuk <- TukeyHSD(bet.dens.aov)
+bet.tuk
+#total shrubs
 shrubs.tuk <- TukeyHSD(shrubs.dens.aov)
 shrubs.tuk
 #total (trees+shrubs)
@@ -353,11 +377,6 @@ ggplot(data = tot.sum, aes(Density,LAI,fill=Density)) +
   theme(legend.position = "none")
 
 #make regression of tree vs. shrub LAI by plot
-#sum 
-shrubs.sum.sb <- aggregate(shrubs.sum$LAI,by=list(shrubs.sum$Plot),FUN=sum)
-colnames(shrubs.sum.sb) <- c("Plot","LAI")
-trees.v.shrubs <- merge(shrubs.sum.sb,trees.sum[,c(2,9)],by="Plot")
-colnames(trees.v.shrubs) <- c("Plot","Tree.LAI.s","Shrub.LAI.s")
 ggplot(data = trees.v.shrubs,aes(Tree.LAI.s,Shrub.LAI.s)) +
   geom_point() +
   geom_smooth(method = lm) +
@@ -495,7 +514,7 @@ write.csv(all.sites,file = "all_sites_LAI_hemi_output.csv")
 #all.sites <- read.csv("L:\\data_repo\\field_data\\siberia_lai\\hemisfer_outputs\\all_sites_LAI_hemi_output.csv")
 #(MAC) all.sites <- read.csv("/Volumes/data/data_repo/field_data/siberia_lai/hemisfer_outputs/all_sites_LAI_hemi_output.csv")
 
-# 2.2: Statistical Analyses -----------------------------------------------------------------------------------------------------
+# 2.2: Statistical analyses and figures -----------------------------------------------------------------------------------------
 
 #add a column to the sites table that indicates the Site name from the filename
 all.sites$Site <- ifelse(nchar(as.character(all.sites$File))<=18,
@@ -639,6 +658,10 @@ totv.sum$Tot.LAI.s <- totv.sum$Tree.LAI.s + totv.sum$Shrub.LAI.s
 veg <- merge(sites.evi,sites.ndvi,by="Site") 
 lai.veg <- merge(veg,totv.sum,by="Site")
 colnames(lai.veg) <- c("Site","EVI.s","EVI.sd","NDVI.s","NDVI.sd","Tree.LAI.s","Shrub.LAI.s","Tot.LAI.s")
+
+
+
+# 3.3: Statistical analyses and figures -----------------------------------------------------------------------------------------
 
 #next, w/ggplot plot ndvi and evi vs. tree LAI, shrub LAI, and total LAI
 library(ggplot2)
