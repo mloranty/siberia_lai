@@ -587,15 +587,15 @@ write.csv(hemi.v.tree,file = "C:/Users/nbendavid/Documents/siberia_lai/data/hemi
 
 ##SECTION 3: VEGETATION INDEXES =================================================================================================
 
-# 3.1: Create buffers, calculate NDVI & EVI -------------------------------------------------------------------------------------
+# 3.1: Planet: Create buffers, calculate NDVI & EVI -------------------------------------------------------------------------------------
 library(raster)
 library(rgdal)
 
 #read NDVI & EVI files
-n <- raster("L:/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_NDVI.tif")
-#(MAC) n <- raster("/Volumes/data/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_NDVI.tif")
-e <- raster("L:/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_EVI.tif")
-#(MAC) e <- raster("/Volumes/data/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_EVI.tif")
+p.n <- raster("L:/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_NDVI.tif")
+#(MAC) p.n <- raster("/Volumes/data/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_NDVI.tif")
+p.e <- raster("L:/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_EVI.tif")
+#(MAC) p.e <- raster("/Volumes/data/data_repo/gis_data/planet_cherskii/PlanetScope_4band_with_SR/20170726_001152_1004/20170726_001152_1004_3B_AnalyticMS_SR_EVI.tif")
 
 #read stand data
 den <- read.csv("L:/projects/siberia_lai/cherskiy_stand_data.csv", header=T)
@@ -604,36 +604,82 @@ den <- read.csv("L:/projects/siberia_lai/cherskiy_stand_data.csv", header=T)
 den <- subset(den, Type == "DG")
 
 #create SpatialPointsDataFrame out of coords
-d <- SpatialPointsDataFrame(den[,5:4],den,
+p.d <- SpatialPointsDataFrame(den[,5:4],den,
                             proj4string = CRS('+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'))
 
 #extract NDVI & EVI with 15m buffers 
-nv <- extract(n,d,buffer=15,na.rm=T)
-ev <- extract(e,d,buffer=15,na.rm=T)
+p.nv <- extract(p.n,p.d,buffer=15,na.rm=T)
+p.ev <- extract(p.e,p.d,buffer=15,na.rm=T)
 
 #get standard deviation and mean
 #for NDVI
-nvs <- unlist(lapply(nv,FUN="mean"))
-nvsd <- unlist(lapply(nv,FUN="sd"))
+p.nvs <- unlist(lapply(p.nv,FUN="mean"))
+p.nvsd <- unlist(lapply(p.nv,FUN="sd"))
 #for EVI
-evs <- unlist(lapply(ev,FUN="mean"))
-evsd <- unlist(lapply(ev,FUN="sd"))
+p.evs <- unlist(lapply(p.ev,FUN="mean"))
+p.evsd <- unlist(lapply(p.ev,FUN="sd"))
 
 #add to data frames with site names
-sites.ndvi <- data.frame(den$Site,nvs,nvsd)
-sites.evi <- data.frame(den$Site,evs,evsd)
+p.sites.ndvi <- data.frame(den$Site,p.nvs,p.nvsd)
+p.sites.evi <- data.frame(den$Site,p.evs,p.evsd)
 
 #rename columns
-colnames(sites.ndvi) <- c("Site","nvs","nvsd")
-colnames(sites.evi) <- c("Site","es","esd")
+colnames(p.sites.ndvi) <- c("Site","nvs","nvsd")
+colnames(p.sites.evi) <- c("Site","es","esd")
 
 #rename "DAV" site to "DavH"
-sites.ndvi$Site <- sub("Dav","DavH",sites.ndvi$Site)
-sites.evi$Site <- sub("Dav","DavH",sites.evi$Site)
+p.sites.ndvi$Site <- sub("Dav","DavH",p.sites.ndvi$Site)
+p.sites.evi$Site <- sub("Dav","DavH",p.sites.evi$Site)
 
 
 
-# 3.2: Compare with allometry LAI data ------------------------------------------------------------------------------------------
+# 3.2: Landsat: Create buffers, calculate NDVI & EVI -------------------------------------------------------------------------------------
+library(raster)
+library(rgdal)
+
+#read NDVI & EVI files
+l.n <- raster("L:/data_repo/gis_data/landsat/LC081050122017072801T1-SC20180524140512/LC081050122017072801T1_NDVI_aea.tif")
+#(MAC) l.n <- raster("/Volumes/data/data_repo/gis_data/landsat/LC081050122017072801T1-SC20180524140512/LC081050122017072801T1_NDVI_aea.tif")
+l.e <- raster("L:/data_repo/gis_data/landsat/LC081050122017072801T1-SC20180524140512/LC081050122017072801T1_EVI_aea.tif")
+#(MAC) l.e <- raster("/Volumes/data/data_repo/gis_data/landsat/LC081050122017072801T1-SC20180524140512/LC081050122017072801T1_EVI_aea.tif")
+
+#read stand data
+den <- read.csv("L:/projects/siberia_lai/cherskiy_stand_data.csv", header=T)
+#(MAC) den <- read.csv("/Volumes/data/projects/siberia_lai/cherskiy_stand_data.csv", header=T)
+#remove irrelevant sites
+den <- subset(den, Type == "DG")
+
+#create SpatialPointsDataFrame out of coords
+l.d <- SpatialPointsDataFrame(den[,5:4],den,
+                            proj4string = CRS('+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'))
+
+#extract NDVI & EVI with 15m buffers 
+l.nv <- extract(l.n,l.d,buffer=15,na.rm=T)
+l.ev <- extract(l.e,l.d,buffer=15,na.rm=T)
+
+#get standard deviation and mean
+#for NDVI
+l.nvs <- unlist(lapply(l.nv,FUN="mean"))
+l.nvsd <- unlist(lapply(l.nv,FUN="sd"))
+#for EVI
+l.evs <- unlist(lapply(l.ev,FUN="mean"))
+l.evsd <- unlist(lapply(l.ev,FUN="sd"))
+
+#add to data frames with site names
+l.sites.ndvi <- data.frame(den$Site,l.nvs,l.nvsd)
+l.sites.evi <- data.frame(den$Site,l.evs,l.evsd)
+
+#rename columns
+colnames(l.sites.ndvi) <- c("Site","nvs","nvsd")
+colnames(l.sites.evi) <- c("Site","es","esd")
+
+#rename "DAV" site to "DavH"
+l.sites.ndvi$Site <- sub("Dav","DavH",l.sites.ndvi$Site)
+l.sites.evi$Site <- sub("Dav","DavH",l.sites.evi$Site)
+
+
+
+# 3.3: Compare with allometry LAI data ------------------------------------------------------------------------------------------
 
 #use allometry data from section 1.4 to compare with vegetation indexes
 
@@ -655,13 +701,13 @@ colnames(totv.sum) <- c("Site","Tree.LAI.s","Shrub.LAI.s")
 totv.sum$Tot.LAI.s <- totv.sum$Tree.LAI.s + totv.sum$Shrub.LAI.s
 
 #merge with ndvi and evi values
-veg <- merge(sites.evi,sites.ndvi,by="Site") 
+veg <- merge(l.sites.evi,l.sites.ndvi,p.sites.evi,p.sites.ndvi,by="Site") 
 lai.veg <- merge(veg,totv.sum,by="Site")
 colnames(lai.veg) <- c("Site","EVI.s","EVI.sd","NDVI.s","NDVI.sd","Tree.LAI.s","Shrub.LAI.s","Tot.LAI.s")
 
 
 
-# 3.3: Statistical analyses and figures -----------------------------------------------------------------------------------------
+# 3.4: Statistical analyses and figures -----------------------------------------------------------------------------------------
 
 #next, w/ggplot plot ndvi and evi vs. tree LAI, shrub LAI, and total LAI
 library(ggplot2)
