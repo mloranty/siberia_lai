@@ -654,24 +654,22 @@ l.d <- SpatialPointsDataFrame(den[,5:4],den,
                             proj4string = CRS('+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0'))
 
 #extract NDVI & EVI with 15m buffers 
-l.nv <- extract(l.n,l.d,buffer=15,na.rm=T)
-l.ev <- extract(l.e,l.d,buffer=15,na.rm=T)
+l.nv <- extract(l.n,l.d,na.rm=T)
+l.ev <- extract(l.e,l.d,na.rm=T)
 
-#get standard deviation and mean
+#get mean
 #for NDVI
 l.nvs <- unlist(lapply(l.nv,FUN="mean"))
-l.nvsd <- unlist(lapply(l.nv,FUN="sd"))
 #for EVI
 l.evs <- unlist(lapply(l.ev,FUN="mean"))
-l.evsd <- unlist(lapply(l.ev,FUN="sd"))
 
 #add to data frames with site names
-l.sites.ndvi <- data.frame(den$Site,l.nvs,l.nvsd)
-l.sites.evi <- data.frame(den$Site,l.evs,l.evsd)
+l.sites.ndvi <- data.frame(den$Site,l.nvs)
+l.sites.evi <- data.frame(den$Site,l.evs)
 
 #rename columns
-colnames(l.sites.ndvi) <- c("Site","nvs","nvsd")
-colnames(l.sites.evi) <- c("Site","es","esd")
+colnames(l.sites.ndvi) <- c("Site","nvs")
+colnames(l.sites.evi) <- c("Site","es")
 
 #rename "DAV" site to "DavH"
 l.sites.ndvi$Site <- sub("Dav","DavH",l.sites.ndvi$Site)
@@ -701,9 +699,12 @@ colnames(totv.sum) <- c("Site","Tree.LAI.s","Shrub.LAI.s")
 totv.sum$Tot.LAI.s <- totv.sum$Tree.LAI.s + totv.sum$Shrub.LAI.s
 
 #merge with ndvi and evi values
-veg <- merge(l.sites.evi,l.sites.ndvi,p.sites.evi,p.sites.ndvi,by="Site") 
+l.veg <- merge(l.sites.evi,l.sites.ndvi,by="Site") 
+p.veg <- merge(p.sites.evi,p.sites.ndvi,by="Site")
+veg <- merge(l.veg,p.veg,by="Site")
 lai.veg <- merge(veg,totv.sum,by="Site")
-colnames(lai.veg) <- c("Site","EVI.s","EVI.sd","NDVI.s","NDVI.sd","Tree.LAI.s","Shrub.LAI.s","Tot.LAI.s")
+lai.veg <- lai.veg[,c(1,2,3,4,6,8,9,10)]
+colnames(lai.veg) <- c("Site","Landsat.EVI","Landsat.NDVI","Planet.EVI","Planet.NDVI","Tree.LAI","Shrub.LAI","Total.LAI")
 
 
 
@@ -713,9 +714,10 @@ colnames(lai.veg) <- c("Site","EVI.s","EVI.sd","NDVI.s","NDVI.sd","Tree.LAI.s","
 library(ggplot2)
 library(ggpubr)
 
+#planet imagery
 #ndvi vs. lai
-#plot tree lai vs. ndvi w/correlation
-ggplot(data = lai.veg, aes(x=Tree.LAI.s,y=NDVI.s)) +
+#planet: plot tree lai vs. ndvi w/correlation
+ggplot(data = lai.veg, aes(x=Tree.LAI,y=Planet.NDVI)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
@@ -723,8 +725,8 @@ ggplot(data = lai.veg, aes(x=Tree.LAI.s,y=NDVI.s)) +
   ylab("Mean NDVI") +
   stat_cor(method = "pearson",label.x = 1.2,label.y = 0.71)
 
-#plot shrub lai vs. ndvi w/correlation
-ggplot(data = lai.veg, aes(x=Shrub.LAI.s,y=NDVI.s)) +
+#planet: plot shrub lai vs. ndvi w/correlation
+ggplot(data = lai.veg, aes(x=Shrub.LAI,y=Planet.NDVI)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
@@ -733,8 +735,8 @@ ggplot(data = lai.veg, aes(x=Shrub.LAI.s,y=NDVI.s)) +
   stat_cor(method = "pearson",label.x = 0.36,label.y = 0.71)+
   geom_smooth(method = lm)
 
-#plot total lai vs. ndvi w/correlation
-ggplot(data = lai.veg, aes(x=Tot.LAI.s,y=NDVI.s)) +
+#planet: plot total lai vs. ndvi w/correlation
+ggplot(data = lai.veg, aes(x=Total.LAI,y=Planet.NDVI)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
@@ -743,8 +745,8 @@ ggplot(data = lai.veg, aes(x=Tot.LAI.s,y=NDVI.s)) +
   stat_cor(method = "pearson",label.x = 1.5,label.y = 0.71)
 
 #evi vs. lai
-#plot tree lai vs. evi w/correlation
-ggplot(data = lai.veg, aes(x=Tree.LAI.s,y=EVI.s)) +
+#planet: plot tree lai vs. evi w/correlation
+ggplot(data = lai.veg, aes(x=Tree.LAI,y=Planet.EVI)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
@@ -752,8 +754,8 @@ ggplot(data = lai.veg, aes(x=Tree.LAI.s,y=EVI.s)) +
   ylab("Mean EVI") +
   stat_cor(method = "pearson",label.x = 1.2,label.y = 0.31)
 
-#plot shrub lai vs. evi w/correlation
-ggplot(data = lai.veg, aes(x=Shrub.LAI.s,y=EVI.s)) +
+#planet: plot shrub lai vs. evi w/correlation
+ggplot(data = lai.veg, aes(x=Shrub.LAI,y=Planet.EVI)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
@@ -763,8 +765,8 @@ ggplot(data = lai.veg, aes(x=Shrub.LAI.s,y=EVI.s)) +
   geom_smooth(method = lm)
   
 
-#plot total lai vs. evi w/correlation
-ggplot(data = lai.veg, aes(x=Tot.LAI.s,y=EVI.s)) +
+#planet: plot total lai vs. evi w/correlation
+ggplot(data = lai.veg, aes(x=Total.LAI,y=Planet.EVI)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
@@ -778,8 +780,8 @@ lai.veg$Density <- ifelse(grepl("H",lai.veg$Site),paste("HIGH"),
                                  paste("LOW")))
 lai.veg.l <- subset(lai.veg,lai.veg$Density == "LOW")
 
-#plot low density sites shrub lai vs. ndvi w/correlation
-ggplot(data = lai.veg.l, aes(x=Shrub.LAI.s,y=NDVI.s)) +
+#planet: plot low density sites shrub lai vs. ndvi w/correlation
+ggplot(data = lai.veg.l, aes(x=Shrub.LAI,y=Planet.NDVI)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
@@ -787,11 +789,99 @@ ggplot(data = lai.veg.l, aes(x=Shrub.LAI.s,y=NDVI.s)) +
   ylab("Mean NDVI") +
   stat_cor(method = "pearson",label.x = 0.5, label.y = 0.725)
 
-#plot low density sites shrub lai vs. evi w/correlation
-ggplot(data = lai.veg.l, aes(x=Shrub.LAI.s,y=EVI.s)) +
+#planet: plot low density sites shrub lai vs. evi w/correlation
+ggplot(data = lai.veg.l, aes(x=Shrub.LAI,y=Planet.EVI)) +
   geom_point() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   xlab("Mean Shrub LAI (m²/m²)") +
   ylab("Mean EVI") +
   stat_cor(method = "pearson",label.x = 0.5,label.y = 0.31)
+
+
+
+#landsat
+#ndvi vs. lai
+#landsat: plot tree lai vs. ndvi w/correlation
+ggplot(data = lai.veg, aes(x=Tree.LAI,y=Landsat.NDVI)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Tree LAI (m²/m²)") +
+  ylab("Mean NDVI") +
+  stat_cor(method = "pearson",label.x = 1.2,label.y = 0.8)
+
+#landsat: plot shrub lai vs. ndvi w/correlation
+ggplot(data = lai.veg, aes(x=Shrub.LAI,y=Landsat.NDVI)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Shrub LAI (m²/m²)") +
+  ylab("Mean NDVI") +
+  stat_cor(method = "pearson",label.x = 0.36,label.y = 0.82)+
+  geom_smooth(method = lm)
+
+#landsat: plot total lai vs. ndvi w/correlation
+ggplot(data = lai.veg, aes(x=Total.LAI,y=Landsat.NDVI)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean LAI (m²/m²)") +
+  ylab("Mean NDVI") +
+  stat_cor(method = "pearson",label.x = 1.5,label.y = 0.81)
+
+#evi vs. lai
+#landsat: plot tree lai vs. evi w/correlation
+ggplot(data = lai.veg, aes(x=Tree.LAI,y=Landsat.EVI)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Tree LAI (m²/m²)") +
+  ylab("Mean EVI") +
+  stat_cor(method = "pearson",label.x = 1,label.y = 0.4)+
+  geom_smooth(method = lm)
+
+#landsat: plot shrub lai vs. evi w/correlation
+ggplot(data = lai.veg, aes(x=Shrub.LAI,y=Landsat.EVI)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Shrub LAI (m²/m²)") +
+  ylab("Mean EVI") +
+  stat_cor(method = "pearson",label.x = 0.4,label.y = 0.4) +
+  geom_smooth(method = lm)
+
+
+#landsat: plot total lai vs. evi w/correlation
+ggplot(data = lai.veg, aes(x=Total.LAI,y=Landsat.EVI)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean LAI (m²/m²)") +
+  ylab("Mean EVI") +
+  stat_cor(method = "pearson",label.x = 1.5,label.y = 0.38)
+
+#test relationship between total shrub lai and ndvi/evi for low density sites
+lai.veg$Density <- ifelse(grepl("H",lai.veg$Site),paste("HIGH"),
+                          ifelse(grepl("M",lai.veg$Site),paste("MED"),
+                                 paste("LOW")))
+lai.veg.l <- subset(lai.veg,lai.veg$Density == "LOW")
+
+#landsat: plot low density sites shrub lai vs. ndvi w/correlation
+ggplot(data = lai.veg.l, aes(x=Shrub.LAI,y=Landsat.NDVI)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Shrub LAI (m²/m²)") +
+  ylab("Mean NDVI") +
+  stat_cor(method = "pearson",label.x = 0.5, label.y = 0.81) +
+  geom_smooth(method = lm)
+
+#landsat: plot low density sites shrub lai vs. evi w/correlation
+ggplot(data = lai.veg.l, aes(x=Shrub.LAI,y=Landsat.EVI)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab("Mean Shrub LAI (m²/m²)") +
+  ylab("Mean EVI") +
+  stat_cor(method = "pearson",label.x = 0.5,label.y = 0.38)
