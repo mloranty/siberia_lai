@@ -1,15 +1,10 @@
 ####    Siberia Tree & Shrub LAI Calculations -----------------------------------------------------------------------------------
-# Hit Alt+O (Windows) or ⌘+⌥+O (Mac) to collapse this code into subsections
 
-#Project Info -------------------------------------------------------------------------------------------------------------------
-
-## This code is the analysis of LAI data from field sites near Cherskiy, Russia
-## Colgate University
-## Loranty Lab
+## This code is the analysis of LAI data from field sites near Cherskiy, Sakha Republic, Russia
+## Colgate University, Dept of Geography, Loranty Lab
 ## Code by N. Bendavid
 
 ##SECTION 1: ALLOMETRY ==========================================================================================================
-
 # 1.1: Calculate LAI for shrubs -------------------------------------------------------------------------------------------------
 
 #read in shrub data
@@ -291,10 +286,17 @@ colnames(shrubs.sum.sb) <- c("Plot","LAI")
 shrubs.sum.sb$Density <- ifelse(grepl("H",shrubs.sum.sb$Plot),paste("HIGH"),
                                    ifelse(grepl("M",shrubs.sum.sb$Plot),paste("MED"),
                                           paste("LOW")))
+shrubs.sum.sb$Site <- ifelse(nchar(shrubs.sum.sb$Plot) < 6,
+                             substr(shrubs.sum.sb$Plot,1,3),
+                             substr(shrubs.sum.sb$Plot,1,4))
 
 #make dataframes for shrubs separated by genera
 sal.sum <- subset(shrubs.sum,Species=="SALIX")
 bet.sum <- subset(shrubs.sum,Species=="BETULA")
+
+#reassign shrubs.sum to hold total shrub lai by plot
+shrubs.sum <- shrubs.sum.sb
+rm(shrubs.sum.sb)
 
 ## LAI by Density (one-way ANOVAs) ##
 #one-way anova for trees LAI by density
@@ -310,7 +312,7 @@ bet.dens.aov <- aov(LAI ~ Density, data = bet.sum)
 summary(bet.dens.aov)
 
 #one-way anova for shrubs LAI by density
-shrubs.dens.aov <- aov(LAI ~ Density, data = shrubs.sum.sb)
+shrubs.dens.aov <- aov(LAI ~ Density, data = shrubs.sum)
 summary(shrubs.dens.aov)
 
 #one-way anova for total (trees+shrubs) LAI by density
@@ -377,13 +379,22 @@ ggplot(data = tot.sum, aes(Density,LAI,fill=Density)) +
   theme(legend.position = "none")
 
 #make regression of tree vs. shrub LAI by plot
-ggplot(data = trees.v.shrubs,aes(Tree.LAI.s,Shrub.LAI.s)) +
+shrubs.bysite <- aggregate(shrubs.sum$LAI, by=list(shrubs.sum$Site),FUN = mean)
+trees.bysite <- aggregate(trees.sum$LAI, by=list(trees.sum$Site),FUN = mean)
+trees.shrubs.reg <- merge(trees.bysite,shrubs.bysite,by="Group.1")
+rm(shrubs.bysite,trees.bysite)
+colnames(trees.shrubs.reg) <- c("Site","Trees","Shrubs")
+
+ggplot(data = trees.shrubs.reg,aes(Trees,Shrubs)) +
   geom_point() +
   geom_smooth(method = lm) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black"))+
   xlab("Mean Tree LAI (m²/m²)") +
   ylab("Mean Shrub LAI (m²/m²)")
+
+trees.shrubs.lm <- lm(Shrubs ~ Trees, data = trees.shrubs.reg)
+summary(trees.shrubs.lm)
 
 # 1.5: Summary statistics and data table ----------------------------------------------------------------------------------------
 
@@ -461,133 +472,8 @@ lai.tab
 
 
 
-##SECTION 2: HEMISPHERICAL PHOTOGRAPHS ==========================================================================================
-
-# 2.1: Process Hemisfer output files --------------------------------------------------------------------------------------------
-#set working directory to folder containing all hemi-photo outputs
-setwd("")
-
-#list the names of the files in the folder for use in for loop
-files <- list.files()
-
-#create a blank dataframe with named columns - for loop will dump rows into this dataframe
-all.sites <- data.frame(matrix(nrow = 0,ncol = 26))
-colnames(all.sites) <- c("File","Date.Time","Mill","LiCor","Lang","G","NC","T","Mill-S","LiCor-S","Lang-S","G-S","NC-S","T-S","Mill-C","LiCor-C","Lang-C","G-C","NC-C","T-C","Mill-SC","LiCor-SC","Lang-SC","G-SC","NC-SC","T-SC")
-
-#runs each file in the folder through
-for (i in files) {
-  
-  #extracts table of lai values
-  d <- read.delim(file = i,                    
-                  skip = 30, 
-                  nrows = 6, 
-                  sep = "\t",header = F, 
-                  na.strings = "-")
-  
-  #extracts file name and date & time
-  d2 <- read.delim(file = i,                   
-                   skip = 0, 
-                   nrows = 2, 
-                   sep = "\t",header = F, 
-                   na.strings = "-")
-  
-  #assigns columns to vectors to rearrange
-  file.datetime <- d2$V2                       
-  no.corr <- d$V2
-  S.corr <- d$V4
-  C.corr <- d$V6
-  SC.corr <- d$V8
-  
-  #combines vectors to make one long row
-  row <- c(file.datetime,no.corr,S.corr,C.corr,SC.corr)
-  #inserts row into blank dataframe
-  all.sites[nrow(all.sites) + 1,] <- row
-}
-
-#converts all LAI values from characters back to numeric
-all.sites[,3:26] <- as.numeric(unlist(all.sites[,3:26]))
-
-#writes all results to a csv
-setwd("/Volumes/data/data_repo/field_data/siberia_lai/hemisfer_outputs/")
-write.csv(all.sites,file = "all_sites_LAI_hemi_output.csv")
-
-#all.sites <- read.csv("L:\\data_repo\\field_data\\siberia_lai\\hemisfer_outputs\\all_sites_LAI_hemi_output.csv")
-#(MAC) all.sites <- read.csv("/Volumes/data/data_repo/field_data/siberia_lai/hemisfer_outputs/all_sites_LAI_hemi_output.csv")
-
-# 2.2: Statistical analyses and figures -----------------------------------------------------------------------------------------
-
-#add a column to the sites table that indicates the Site name from the filename
-all.sites$Site <- ifelse(nchar(as.character(all.sites$File))<=18,
-                         substr(all.sites$File,1,3),
-                         substr(all.sites$File,1,4))
-
-#rename DAV site to DavH
-all.sites$Site <- sub("DAV","DavH",all.sites$Site)
-
-#add column that indicates density
-all.sites$Density <- ifelse(grepl("H",all.sites$Site),paste("HIGH"),
-                               ifelse(grepl("M",all.sites$Site),paste("MED"),
-                                      paste("LOW")))
-
-#remove unecessary columns, keep Site, File, Density LiCor+C, Thim+C
-hemi.sum <- all.sites[,c(27,1,28,16,20)]
-colnames(hemi.sum) <- c("Site","File","Density","LiCor","Thim")
-
-#one-way ANOVAs for LAI by density, one for each method, LiCor & Thim
-#LiCor
-li.dens.aov <- aov(LiCor ~ Density, data = hemi.sum)
-summary(li.dens.aov)
-#Thim
-th.dens.aov <- aov(Thim ~ Density, data = hemi.sum)
-summary(th.dens.aov)
-
-#post-hoc Tukey's tests for LiCor & Thim
-#LiCor
-li.tuk <- TukeyHSD(li.dens.aov)
-li.tuk
-#Thim
-th.tuk <- TukeyHSD(th.dens.aov)
-th.tuk
-
-#convert to factor and set levels
-hemi.sum$Density <- as.character(hemi.sum$Density)
-hemi.sum$Density <- factor(hemi.sum$Density,levels=c("HIGH","MED","LOW"))
-
-#create boxplots for each method LiCor & Thim
-#LiCor
-ggplot(data = hemi.sum, aes(Density,LiCor,fill=Density)) +
-  geom_boxplot() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
-  xlab("Stand Density") +
-  ylab("Mean Leaf Area Index (m²/m²)") +
-  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))+
-  theme(legend.position = "none")
-#Thim
-ggplot(data = hemi.sum, aes(Density,Thim,fill=Density)) +
-  geom_boxplot() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
-  xlab("Stand Density") +
-  ylab("Mean Leaf Area Index (m²/m²)") +
-  scale_fill_manual(values=c("#31a354","#addd8e", "#f7fcb9"))+
-  theme(legend.position = "none")
-
-#create table showing both hemi photo methods and allometry tree LAI
-trees.site <- aggregate(trees.sum$LAI,by=list(trees.sum$Site),FUN=mean)
-colnames(trees.site) <- c("Site","Tree.LAI.s")
-licor.site <- aggregate(hemi.sum$LiCor,by=list(hemi.sum$Site),FUN=mean)
-colnames(licor.site) <- c("Site","LiCor.LAI.s")
-thim.site <- aggregate(hemi.sum$Thim,by=list(hemi.sum$Site),FUN=mean)
-colnames(thim.site) <- c("Site","Thim.LAI.s")
-licor.thim <- merge(licor.site,thim.site,by="Site")
-hemi.v.tree <- merge(licor.thim,trees.site,by="Site")
-rm(trees.site,licor.site,licor.thim,thim.site)
-write.csv(hemi.v.tree,file = "C:/Users/nbendavid/Documents/siberia_lai/data/hemi_vs_tree_table.csv") 
-
-##SECTION 3: VEGETATION INDEXES =================================================================================================
-
-# 3.1: Planet: Create buffers, calculate NDVI & EVI -------------------------------------------------------------------------------------
+##SECTION 2: VEGETATION INDEXES =================================================================================================
+# 2.1: Planet: Create buffers, calculate NDVI & EVI -------------------------------------------------------------------------------------
 library(raster)
 library(rgdal)
 
@@ -633,7 +519,7 @@ p.sites.evi$Site <- sub("Dav","DavH",p.sites.evi$Site)
 
 
 
-# 3.2: Landsat: Create buffers, calculate NDVI & EVI -------------------------------------------------------------------------------------
+# 2.2: Landsat: Create buffers, calculate NDVI & EVI -------------------------------------------------------------------------------------
 library(raster)
 library(rgdal)
 
@@ -677,7 +563,7 @@ l.sites.evi$Site <- sub("Dav","DavH",l.sites.evi$Site)
 
 
 
-# 3.3: Compare with allometry LAI data ------------------------------------------------------------------------------------------
+# 2.3: Compare with allometry LAI data ------------------------------------------------------------------------------------------
 
 #use allometry data from section 1.4 to compare with vegetation indexes
 
@@ -708,7 +594,7 @@ colnames(lai.veg) <- c("Site","Landsat.EVI","Landsat.NDVI","Planet.EVI","Planet.
 
 
 
-# 3.4: Statistical analyses and figures -----------------------------------------------------------------------------------------
+# 2.4: Statistical analyses and figures -----------------------------------------------------------------------------------------
 
 #next, w/ggplot plot ndvi and evi vs. tree LAI, shrub LAI, and total LAI
 library(ggplot2)
